@@ -27,13 +27,13 @@ fn pixel_to_char(pixel: &Pixel) -> char {
 
 // Simple 2d point wrapper.
 pub struct Point {
-    pub x: usize,
-    pub y: usize
+    pub x: i16,
+    pub y: i16
 }
 
 impl Point {
     // Create a new point.
-    pub fn new(x: usize, y: usize) -> Point {
+    pub fn new(x: i16, y: i16) -> Point {
         Point {
             x: x, 
             y: y
@@ -43,62 +43,115 @@ impl Point {
 
 // Wrapper for a "screen" to render.
 pub struct Screen {
-    pub dimensions: Point,
+    pub width: u16,
+    pub height: u16,
     content: Vec<Vec<bool>>
 }
 
 impl Screen {
-
-    // Create a new screen.
-    pub fn new(dimensions: Point) -> Screen {
+    // Create a new screen, sized to the terminal.
+    pub fn new() -> Screen {
         print!(
             "{}{}", 
             termion::clear::All, 
             termion::cursor::Goto(1, 1)
         );
-        Screen{
-            content: vec![vec![false; dimensions.x]; dimensions.y],
-            dimensions: dimensions
-        }
+
+        let mut res = Screen{
+            content: vec![vec![false; 0]; 0],
+            width: 0,
+            height: 0,
+        };
+        res.fit_to_terminal();
+        res
+    }
+
+    // Resize screen to fit terminal width and height.
+    pub fn fit_to_terminal(&mut self) {
+        let (
+            terminal_width, 
+            terminal_height
+        ) = termion::terminal_size().unwrap();
+        self.resize(terminal_width * 2 - 1, terminal_height * 2 - 1);
     }
 
     // Write a value to a coord on the screen.
+    // If out of bounds, will simply not write.
     pub fn write(&mut self, val: bool, point: &Point) {
-        assert!(point.x < self.dimensions.x);
-        assert!(point.y < self.dimensions.y);
-        self.content[point.y][point.x] = val;
+        let x_in_bounds = 0 < point.x && (point.x as u16) < self.width;
+        let y_in_bounds = 0 < point.y && (point.y as u16) < self.height;
+        if x_in_bounds && y_in_bounds {
+            self.content[point.y as usize][point.x as usize] = val;
+        }
     }
 
     // Clears the whole screen.
     pub fn clear(&mut self) {
-        self.content = vec![vec![false; self.dimensions.x]; self.dimensions.y];
+        self.content = vec![vec![false; self.width as usize]; self.height as usize];
+    }
+
+    // Resizes the screen, clears it too.
+    pub fn resize(&mut self, width: u16, height: u16) {
+        self.width = width;
+        self.height = height;
+        self.content = vec![vec![false; self.width as usize]; self.height as usize];
+    }
+
+    // Draw a line with Bresenham's line algorithm.
+    // See https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm.
+    pub fn line(&mut self, start: &Point, end: &Point) {            
+        let delta_x = (end.x - start.x).abs();
+        let step_x: i16 = if start.x < end.x {1} else {-1};
+        let delta_y = -(end.y - start.y).abs();
+        let step_y: i16 = if start.y < end.y {1} else {-1};
+        let mut err = delta_x + delta_y;
+
+        let mut x = start.x;
+        let mut y = start.y;
+
+        self.write(true, &Point::new(x, y));
+
+        while !(x == end.x && y == end.y) {
+            self.write(true, &Point::new(x, y));
+            let curr_err = err;
+
+            if 2 * curr_err >= delta_y {
+                err += delta_y;
+                x += step_x;
+            }
+
+            if 2 * curr_err <= delta_x {
+                err += delta_x;
+                y += step_y;
+            }
+        }
     }
 
     // Render the screen.
     pub fn render(&self) {
         print!("{}", termion::cursor::Goto(1, 1));
 
-        for real_y in 0..(self.dimensions.y / 2) {
+        for real_y in 0..(self.height / 2) {
             // Extract the relavent rows in the content matrix.
             let rows = (
-                &self.content[real_y * 2],
-                &self.content[real_y * 2 + 1]
+                &self.content[real_y as usize * 2],
+                &self.content[real_y as usize * 2 + 1]
             );
 
-            for real_x in 0..(self.dimensions.x / 2) {
+            for real_x in 0..(self.width / 2) {
                 // Extract the relavent pixel in the content matrix, and print it out.
                 let pixel: Pixel = (
-                    rows.0[real_x * 2], rows.0[real_x * 2 + 1],
-                    rows.1[real_x * 2], rows.1[real_x * 2 + 1]
+                    rows.0[real_x as usize * 2], rows.0[real_x as usize * 2 + 1],
+                    rows.1[real_x as usize * 2], rows.1[real_x as usize * 2 + 1]
                 );
                 print!("{}", pixel_to_char(&pixel));
             }
 
             // Handle case of odd width by adding another char.
-            if self.dimensions.x % 2 == 1 {
+            if self.width % 2 == 1 {
                 let pixel: Pixel = (
-                    rows.0[self.dimensions.x - 1], false,
-                    rows.1[self.dimensions.x - 1], false
+                    rows.0[self.width as usize - 1], false,
+                    rows.1[self.width as usize - 1], false
                 );
                 print!("{}", pixel_to_char(&pixel));
             }
@@ -107,21 +160,21 @@ impl Screen {
         }
 
         // Handle case of odd height by adding another char to every column.
-        if self.dimensions.y % 2 == 1 {
-            let last_row = &self.content[self.dimensions.y - 1];
-            for real_x in 0..(self.dimensions.x / 2) {
+        if self.height % 2 == 1 {
+            let last_row = &self.content[self.height as usize - 1];
+            for real_x in 0..(self.width / 2) {
                 // Extract the relavent pixel in the content matrix, and print it out.
                 let pixel: Pixel = (
-                    last_row[real_x * 2], last_row[real_x * 2 + 1],
+                    last_row[real_x as usize * 2], last_row[real_x as usize * 2 + 1],
                     false, false
                 );
                 print!("{}", pixel_to_char(&pixel));
             }
 
             // Handle odd width.
-            if self.dimensions.x % 2 == 1 {
+            if self.width % 2 == 1 {
                 let pixel: Pixel = (
-                    last_row[self.dimensions.x - 1], false,
+                    last_row[self.width as usize - 1], false,
                     false, false
                 );
                 print!("{}", pixel_to_char(&pixel));
