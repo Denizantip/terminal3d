@@ -35,8 +35,8 @@ impl Point {
     // Create a new point.
     pub fn new(x: i16, y: i16) -> Point {
         Point {
-            x: x, 
-            y: y
+            x, 
+            y
         }
     }
 }
@@ -58,7 +58,7 @@ impl Screen {
         );
 
         let mut res = Screen{
-            content: vec![vec![false; 0]; 0],
+            content: Vec::new(),
             width: 0,
             height: 0,
         };
@@ -156,7 +156,7 @@ impl Screen {
                 print!("{}", pixel_to_char(&pixel));
             }
 
-            print!("\n")
+            println!()
         }
 
         // Handle case of odd height by adding another char to every column.
