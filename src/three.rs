@@ -64,13 +64,13 @@ impl Camera {
         let delta_z = point.z - self.coordinates.z;
 
         // Find coordinates of point in camera space.
-        let new_x = c_yaw * (s_roll * delta_y + c_roll * delta_x) - s_yaw * delta_z;
+        let new_x = c_yaw * (-s_roll * delta_y + c_roll * delta_x) - s_yaw * delta_z;
         let new_y: f32 = -s_pitch * (
-            c_yaw * delta_z + s_yaw * (s_roll * delta_y + c_roll * delta_x)
-        ) + c_pitch * (c_roll * delta_y - s_roll * delta_x);
+            c_yaw * delta_z + s_yaw * (-s_roll * delta_y + c_roll * delta_x)
+        ) + c_pitch * (c_roll * delta_y + s_roll * delta_x);
         let new_z: f32 = c_pitch * (
-            c_yaw * delta_z + s_yaw * (s_roll * delta_y + c_roll * delta_x)
-        ) + s_pitch * (c_roll * delta_y - s_roll * delta_x);
+            c_yaw * delta_z + s_yaw * (-s_roll * delta_y + c_roll * delta_x)
+        ) + s_pitch * (c_roll * delta_y + s_roll * delta_x);
 
         // Naive near plane clipping.
         // Does not clip all out-of-bounds cases, only ones that cause visual glitches.
@@ -99,6 +99,7 @@ impl Camera {
     }
 
     // Plot a 3d point.
+    #[allow(dead_code)]
     pub fn write(&mut self, val: bool, point: &Point) {
         if let Ok(point_2d) = self.project(point) {
             self.screen.write(val, &point_2d)
