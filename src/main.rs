@@ -1,4 +1,4 @@
-mod canvas;
+mod screen;
 mod three;
 
 fn main() {
@@ -54,13 +54,14 @@ fn main() {
         camera.edge(&front_3, &back_3);
         camera.edge(&front_4, &back_4);
 
-        camera.coordinates.z -= 0.0001;
-        camera.coordinates.x += 0.00003;
-        camera.coordinates.y += 0.00001;
-        camera.roll += 0.0001;
+        camera.coordinates.z -= 0.01;
+        camera.roll += 0.001;
+        camera.pitch -= 0.002;
+        camera.coordinates.y += 0.002;
+        camera.coordinates.x += 0.003;
 
         // Render.
         camera.screen.render();
-        // std::thread::sleep(std::time::Duration::from_millis(16));
+        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 }
