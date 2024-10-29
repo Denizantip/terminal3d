@@ -177,13 +177,13 @@ impl Screen {
 
             // Don't print newline on last loop.
             if real_y != self.height / 2 - 1 {
-                println!()
+                print!("\r\n");
             }
         }
 
         // Handle case of odd height by adding another char to every column.
         if self.height % 2 == 1 {
-            println!();
+            print!("\r\n");
 
             let last_row = &self.content[self.height as usize - 1];
             for real_x in 0..(self.width / 2) {

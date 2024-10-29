@@ -1,3 +1,9 @@
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
+use termion::event::{self, Event};
+use std::io::stdout;
+use std::process::exit;
+
 mod canvas;
 mod three;
 
@@ -7,6 +13,11 @@ fn main() {
         0., 0., 0., 
         0.1, 1.7,
     );
+
+    let stdout: std::io::Stdout = stdout();
+    let _ = stdout.lock().into_raw_mode().unwrap();
+    let user_input = termion::async_stdin();
+    let mut user_events = user_input.events();
 
     loop {
         camera.screen.fit_to_terminal();
@@ -54,7 +65,38 @@ fn main() {
         camera.edge(&front_3, &back_3);
         camera.edge(&front_4, &back_4);
 
-        camera.yaw += 0.01;
+        for event in &mut user_events {
+            match event {
+                Ok(event) => match event {
+                    Event::Key(key) => {
+                        match key {
+                            event::Key::Right => { camera.yaw += 0.05 }
+                            event::Key::Left => { camera.yaw -= 0.05 }
+                            event::Key::Up => {
+                                camera.coordinates.z += camera.yaw.cos() * 0.05;
+                                camera.coordinates.x += camera.yaw.sin() * 0.05;
+                                camera.coordinates.y += camera.pitch.sin() * 0.05;
+                            }
+                            event::Key::Down => {
+                                camera.coordinates.z -= camera.yaw.cos() * 0.05;
+                                camera.coordinates.x -= camera.yaw.sin() * 0.05;
+                                camera.coordinates.y -= camera.pitch.sin() * 0.05;
+                            }
+                            event::Key::Char(c) => {
+                                if c == 'w' { camera.pitch += 0.05 }
+                                if c == 's' { camera.pitch -= 0.05 }
+                            }
+                            event::Key::Ctrl(c) => { 
+                                if c == 'c' { exit(0) }
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
+                },
+                Err(_) => {}
+            }
+        }
 
         // Render.
         camera.screen.render();
