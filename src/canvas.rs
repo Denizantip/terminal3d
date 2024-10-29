@@ -27,17 +27,14 @@ fn pixel_to_char(pixel: &Pixel) -> char {
 
 // Simple 2d point wrapper.
 pub struct Point {
-    pub x: i16,
-    pub y: i16
+    pub x: i32,
+    pub y: i32
 }
 
 impl Point {
     // Create a new point.
-    pub fn new(x: i16, y: i16) -> Point {
-        Point {
-            x, 
-            y
-        }
+    pub fn new(x: i32, y: i32) -> Point {
+        Point { x, y }
     }
 }
 
@@ -72,7 +69,7 @@ impl Screen {
             terminal_width, 
             terminal_height
         ) = termion::terminal_size().unwrap();
-        self.resize(terminal_width * 2 - 1, terminal_height * 2 - 1);
+        self.resize(terminal_width * 2, terminal_height * 2);
     }
 
     // Write a value to a coord on the screen.
@@ -90,20 +87,42 @@ impl Screen {
         self.content = vec![vec![false; self.width as usize]; self.height as usize];
     }
 
-    // Resizes the screen, clears it too.
+    // Resizes the screen.
+    // Either crops the image if the requested size is smaller,
+    // or extends the image with empty cells if the request is larger.
     pub fn resize(&mut self, width: u16, height: u16) {
-        self.width = width;
+
+        // Handle height.
+        if height > self.height {
+            self.content.extend(vec![
+                vec![false; width as usize]; 
+                (height - self.height) as usize
+            ])
+        } else {
+            self.content.truncate(height as usize);
+        }
         self.height = height;
-        self.content = vec![vec![false; self.width as usize]; self.height as usize];
+
+        // Handle width.
+        if width > self.width {
+            for row in self.content.iter_mut() {
+                row.extend(vec![false; (width - self.width) as usize]);
+            }
+        } else {
+            for row in self.content.iter_mut() {
+                row.truncate(width as usize);
+            }
+        }
+        self.width = width;
     }
 
     // Draw a line with Bresenham's line algorithm.
     // See https://en.wikipedia.org/wiki/Bresenham%27s_line_algorithm.
     pub fn line(&mut self, start: &Point, end: &Point) {            
         let delta_x = (end.x - start.x).abs();
-        let step_x: i16 = if start.x < end.x {1} else {-1};
+        let step_x: i32 = if start.x < end.x {1} else {-1};
         let delta_y = -(end.y - start.y).abs();
-        let step_y: i16 = if start.y < end.y {1} else {-1};
+        let step_y: i32 = if start.y < end.y {1} else {-1};
         let mut err = delta_x + delta_y;
 
         let mut x = start.x;
@@ -156,11 +175,16 @@ impl Screen {
                 print!("{}", pixel_to_char(&pixel));
             }
 
-            println!()
+            // Don't print newline on last loop.
+            if real_y != self.height / 2 - 1 {
+                println!()
+            }
         }
 
         // Handle case of odd height by adding another char to every column.
         if self.height % 2 == 1 {
+            println!();
+
             let last_row = &self.content[self.height as usize - 1];
             for real_x in 0..(self.width / 2) {
                 // Extract the relavent pixel in the content matrix, and print it out.

@@ -1,42 +1,63 @@
-mod renderer;
+mod canvas;
+mod three;
 
 fn main() {
-    // Create new screen.
-    let mut screen = renderer::Screen::new();
-    
-    let mut angle: f64 = 0.;
+    let mut camera = three::Camera::new(
+        three::Point::new(0., 0., 0.), 
+        0., 0., 0., 
+        0.1, 1.7,
+    );
+
     loop {
-        // Resize to terminal.
-        screen.fit_to_terminal();
+        camera.screen.fit_to_terminal();
+        camera.screen.clear();
 
-        let midpoint = renderer::Point::new(
-            screen.width as i16 / 2,
-            screen.height as i16 / 2,
-        );
-        let r = (std::cmp::min(midpoint.x, midpoint.y) / 2) as f64;
-        
-        let point_1: renderer::Point = renderer::Point::new(
-            (midpoint.x as f64 + (r / 2.0) * angle.cos()) as i16, 
-            (midpoint.y as f64 + (r / 2.0) * angle.sin()) as i16, 
-        );
-
-        let point_2: renderer::Point = renderer::Point::new(
-            (midpoint.x as f64 + r * (0.3 * angle).cos()) as i16, 
-            (midpoint.y as f64 + r * (0.3 * angle).sin()) as i16, 
+        // Back points.
+        let (
+            back_1,
+            back_2,
+            back_3,
+            back_4
+        ) = (
+            three::Point::new(-0.1, -0.1, 1.5),
+            three::Point::new(-0.1, 0.1, 1.5),
+            three::Point::new(0.1, 0.1, 1.5),
+            three::Point::new(0.1, -0.1, 1.5)
         );
 
-        let point_3: renderer::Point = renderer::Point::new(
-            (midpoint.x as f64 + (r * 1.8) * (0.7 * angle).cos()) as i16, 
-            (midpoint.y as f64 + (r * 1.8) * (0.7 * angle).sin()) as i16, 
+        // Front points.
+        let (
+            front_1,
+            front_2,
+            front_3,
+            front_4
+        ) = (
+            three::Point::new(-0.1, -0.1, 1.),
+            three::Point::new(-0.1, 0.1, 1.),
+            three::Point::new(0.1, 0.1, 1.),
+            three::Point::new(0.1, -0.1, 1.)
         );
 
-        screen.clear();
-        screen.line(&point_1, &point_2);
-        screen.line(&point_2, &point_3);
-        screen.line(&point_1, &point_3);
-        screen.render();
+        // Draw edges.
+        camera.edge(&front_1, &front_2);
+        camera.edge(&front_2, &front_3);
+        camera.edge(&front_3, &front_4);
+        camera.edge(&front_4, &front_1);
 
+        camera.edge(&back_1, &back_2);
+        camera.edge(&back_2, &back_3);
+        camera.edge(&back_3, &back_4);
+        camera.edge(&back_4, &back_1);
+
+        camera.edge(&front_1, &back_1);
+        camera.edge(&front_2, &back_2);
+        camera.edge(&front_3, &back_3);
+        camera.edge(&front_4, &back_4);
+
+        camera.yaw += 0.01;
+
+        // Render.
+        camera.screen.render();
         std::thread::sleep(std::time::Duration::from_millis(16));
-        angle += 0.1;
     }
 }
