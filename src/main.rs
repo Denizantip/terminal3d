@@ -39,6 +39,12 @@ fn main() {
 
         // Render.
         camera.screen.render();
+        println!(
+            "[ x: {:6.3}, y: {:6.3}, z: {:6.3} | yaw: {:6.3}, pitch: {:6.3}, roll: {:6.3} ]", 
+            camera.coordinates.x, camera.coordinates.y, camera.coordinates.z,
+            camera.yaw, camera.pitch, camera.roll
+        );
+
         std::thread::sleep(std::time::Duration::from_millis(16));
     }
 }

@@ -69,7 +69,7 @@ impl Screen {
             terminal_width, 
             terminal_height
         ) = termion::terminal_size().unwrap();
-        self.resize(terminal_width * 2, terminal_height * 2);
+        self.resize(terminal_width * 2, (terminal_height - 1) * 2);
     }
 
     // Write a value to a coord on the screen.
@@ -175,16 +175,11 @@ impl Screen {
                 print!("{}", pixel_to_char(&pixel));
             }
 
-            // Don't print newline on last loop.
-            if real_y != self.height / 2 - 1 {
-                print!("\r\n");
-            }
+            println!();
         }
 
         // Handle case of odd height by adding another char to every column.
         if self.height % 2 == 1 {
-            print!("\r\n");
-
             let last_row = &self.content[self.height as usize - 1];
             for real_x in 0..(self.width / 2) {
                 // Extract the relavent pixel in the content matrix, and print it out.
@@ -203,6 +198,8 @@ impl Screen {
                 );
                 print!("{}", pixel_to_char(&pixel));
             }
+
+            println!();
         }
     }
 }
