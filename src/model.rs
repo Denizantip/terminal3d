@@ -3,11 +3,11 @@ use crate::three;
 // Simple 3d point wrapper.
 pub struct Model {
     // Defined in model space.
-    points: Vec<three::Point>,
-    edges: Vec<(three::Point, three::Point)>,
+    pub points: Vec<three::Point>,
+    pub edges: Vec<(three::Point, three::Point)>,
 
     // Position of (0, 0, 0) in model space, in world space.
-    position: three::Point
+    pub position: three::Point
 }
 
 impl Model {
@@ -26,6 +26,7 @@ impl Model {
     }
 
     // Creates a new cube, centered at the specified position, with the specified side-length.
+    #[allow(dead_code)]
     pub fn new_cube(
         side_length: f32,
         position: three::Point
@@ -71,19 +72,6 @@ impl Model {
             x: point.x + self.position.x,
             y: point.y + self.position.y,
             z: point.z + self.position.z
-        }
-    }
-
-    pub fn render(&self, camera: &mut three::Camera) {
-        for point in self.points.iter() {
-            camera.write(true, &self.model_to_world(point));
-        }
-
-        for edge in self.edges.iter() {
-            camera.edge( 
-                &self.model_to_world(&edge.0),
-                &self.model_to_world(&edge.1)
-            );
         }
     }
 }

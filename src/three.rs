@@ -1,4 +1,4 @@
-use crate::screen;
+use crate::{model, screen};
 
 // Simple 3d point wrapper.
 #[derive(Copy, Clone)]
@@ -27,10 +27,10 @@ pub struct Camera {
     pub roll: f32,
 
     // viewport parameters.
-    viewport_distance: f32,
+    pub viewport_distance: f32,
 
     // In radians
-    viewport_fov: f32,
+    pub viewport_fov: f32,
 
     // Screen to render.
     pub screen: screen::Screen
@@ -96,11 +96,24 @@ impl Camera {
         screen::Point::new(screen_x.round() as i32, screen_y.round() as i32)
     }
 
+    pub fn plot_model(&mut self, model: &model::Model) {
+        for point in model.points.iter() {
+            self.write(true, &model.model_to_world(point));
+        }
+
+        for edge in model.edges.iter() {
+            self.edge( 
+                &model.model_to_world(&edge.0),
+                &model.model_to_world(&edge.1)
+            );
+        }
+    }
+
     // Plot a 3d point.
     pub fn write(&mut self, val: bool, point: &Point) {
         let camera_point = self.world_to_camera(point);
         if camera_point.z >= self.viewport_distance {
-            self.screen.write(val, &self.camera_to_screen(point));
+            self.screen.write(val, &self.camera_to_screen(&camera_point));
         }
     }
 

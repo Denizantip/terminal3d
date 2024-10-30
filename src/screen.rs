@@ -1,3 +1,6 @@
+use std::io::Stdout;
+use termion::raw::{IntoRawMode, RawTerminal};
+
 // Pixel type, represents a chunk of 4 cells, 
 // to be converted to a single char on the screen.
 // Order is top-left, top-right, bottom-left, bottom-right.
@@ -42,25 +45,40 @@ impl Point {
 pub struct Screen {
     pub width: u16,
     pub height: u16,
-    content: Vec<Vec<bool>>
+    content: Vec<Vec<bool>>,
+    raw_terminal: RawTerminal<Stdout>
 }
 
 impl Screen {
     // Create a new screen, sized to the terminal.
     pub fn new() -> Screen {
+        // Put stdout in raw mode.
+        let stdout = std::io::stdout();
+        let Ok(raw_terminal) = stdout.into_raw_mode() else { panic!("Failed to enter raw mode.") };
+
+        // Clear term and go to 0, 0.
         print!(
             "{}{}", 
             termion::clear::All, 
             termion::cursor::Goto(1, 1)
         );
 
+        // Create screen.
         let mut res = Screen{
             content: Vec::new(),
             width: 0,
             height: 0,
+            raw_terminal
         };
+
+        // Fit to terminal and return.
         res.fit_to_terminal();
         res
+    }
+
+    // Exit raw mode.
+    pub fn reset_stdout(&self) {
+        let Ok(_) = self.raw_terminal.suspend_raw_mode() else { panic!("Failed to leave raw mode") };
     }
 
     // Resize screen to fit terminal width and height.
