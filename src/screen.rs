@@ -175,7 +175,7 @@ impl Screen {
                 print!("{}", pixel_to_char(&pixel));
             }
 
-            println!();
+            print!("\r\n");
         }
 
         // Handle case of odd height by adding another char to every column.
@@ -199,7 +199,7 @@ impl Screen {
                 print!("{}", pixel_to_char(&pixel));
             }
 
-            println!();
+            print!("\r\n");
         }
     }
 }

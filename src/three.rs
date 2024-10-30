@@ -20,8 +20,8 @@ pub struct Camera {
     pub coordinates: Point,
 
     // In Radians.
-    // When yaw: 0, pitch: 0, roll 0,
-    // looking straight along the z-axis.
+    // Operations applied in order: yaw, pitch, roll,
+    // Starting from z+ direction.
     pub yaw: f32,
     pub pitch: f32,
     pub roll: f32,
@@ -61,16 +61,22 @@ impl Camera {
         let delta_y = point.y - self.coordinates.y;
         let delta_z = point.z - self.coordinates.z;
 
-        // Find coordinates of point in camera space.
-        let new_x = c_yaw * (c_roll * delta_x - s_roll * delta_y) - s_yaw * delta_z;
-        let new_y: f32 = -s_pitch * (
-            c_yaw * delta_z + s_yaw * (c_roll * delta_x - s_roll * delta_y)
-        ) + c_pitch * (c_roll * delta_y + s_roll * delta_x);
-        let new_z: f32 = c_pitch * (
-            c_yaw * delta_z + s_yaw * (c_roll * delta_x - s_roll * delta_y)
-        ) + s_pitch * (c_roll * delta_y + s_roll * delta_x);
+        // Undo yaw.
+        let unyawed_x = delta_x * c_yaw - delta_z * s_yaw;
+        let unyawed_y = delta_y;
+        let unyawed_z = delta_x * s_yaw + delta_z * c_yaw;
 
-        Point::new(new_x, new_y, new_z)
+        // Undo pitch.
+        let unpitched_x = unyawed_x;
+        let unpitched_y = unyawed_y * c_pitch - unyawed_z * s_pitch;
+        let unpitched_z = unyawed_y * s_pitch + unyawed_z * c_pitch;
+
+        // Undo roll.
+        let unrolled_x = unpitched_x * c_roll - unpitched_y * s_roll;
+        let unrolled_y = unpitched_x * s_roll + unpitched_y * c_roll;
+        let unrolled_z = unpitched_z;
+
+        Point::new(unrolled_x, unrolled_y, unrolled_z)
     }
 
     fn camera_to_screen(&self, point: &Point) -> screen::Point {
