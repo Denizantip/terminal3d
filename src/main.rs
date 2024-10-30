@@ -1,64 +1,41 @@
+use three::Point;
+
 mod screen;
 mod three;
+mod model;
 
 fn main() {
     let mut camera = three::Camera::new(
-        three::Point::new(0., 0., 0.), 
-        0., 0., 0., 
+        three::Point::new(0., 0.1, -0.5), 
+        0., -0.1, 0., 
         0.1, 1.7,
     );
+
+    let cube_1 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 0.));
+    let cube_2 = model::Model::new_cube(0.1, Point::new(0.2, 0., 0.));
+
+    let cube_3 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 1.));
+    let cube_4 = model::Model::new_cube(0.1, Point::new(0.2, 0., 1.));
+
+    let cube_5 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 2.));
+    let cube_6 = model::Model::new_cube(0.1, Point::new(0.2, 0., 2.));
+
+    let cube_7 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 3.));
+    let cube_8 = model::Model::new_cube(0.1, Point::new(0.2, 0., 3.));
 
     loop {
         camera.screen.fit_to_terminal();
         camera.screen.clear();
+        cube_1.render(&mut camera);
+        cube_2.render(&mut camera);
+        cube_3.render(&mut camera);
+        cube_4.render(&mut camera);
+        cube_5.render(&mut camera);
+        cube_6.render(&mut camera);
+        cube_7.render(&mut camera);
+        cube_8.render(&mut camera);
 
-        // Back points.
-        let (
-            back_1,
-            back_2,
-            back_3,
-            back_4
-        ) = (
-            three::Point::new(-0.1, -0.1, 0.1),
-            three::Point::new(-0.1, 0.1, 0.1),
-            three::Point::new(0.1, 0.1, 0.1),
-            three::Point::new(0.1, -0.1, 0.1)
-        );
-
-        // Front points.
-        let (
-            front_1,
-            front_2,
-            front_3,
-            front_4
-        ) = (
-            three::Point::new(-0.1, -0.1, -0.1),
-            three::Point::new(-0.1, 0.1, -0.1),
-            three::Point::new(0.1, 0.1, -0.1),
-            three::Point::new(0.1, -0.1, -0.1)
-        );
-
-        // Draw edges.
-        camera.edge(&front_1, &front_2);
-        camera.edge(&front_2, &front_3);
-        camera.edge(&front_3, &front_4);
-        camera.edge(&front_4, &front_1);
-
-        camera.edge(&back_1, &back_2);
-        camera.edge(&back_2, &back_3);
-        camera.edge(&back_3, &back_4);
-        camera.edge(&back_4, &back_1);
-
-        camera.edge(&front_1, &back_1);
-        camera.edge(&front_2, &back_2);
-        camera.edge(&front_3, &back_3);
-        camera.edge(&front_4, &back_4);
-
-        camera.coordinates.z -= 0.01;
-        camera.roll += 0.001;
-        camera.pitch -= 0.002;
-        camera.coordinates.y += 0.002;
-        camera.coordinates.x += 0.003;
+        camera.coordinates.z += 0.01;
 
         // Render.
         camera.screen.render();

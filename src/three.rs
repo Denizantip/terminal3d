@@ -1,6 +1,7 @@
 use crate::screen;
 
 // Simple 3d point wrapper.
+#[derive(Copy, Clone)]
 pub struct Point {
     pub x: f32,
     pub y: f32,
@@ -90,7 +91,6 @@ impl Camera {
     }
 
     // Plot a 3d point.
-    #[allow(dead_code)]
     pub fn write(&mut self, val: bool, point: &Point) {
         let camera_point = self.world_to_camera(point);
         if camera_point.z >= self.viewport_distance {
