@@ -7,21 +7,21 @@ mod model;
 fn main() {
     let mut camera = three::Camera::new(
         three::Point::new(0., 0.1, -0.5), 
-        0., -0.1, 0., 
+        0., -0.12, 0., 
         0.1, 1.7,
     );
 
     let cube_1 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 0.));
     let cube_2 = model::Model::new_cube(0.1, Point::new(0.2, 0., 0.));
 
-    let cube_3 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 1.));
-    let cube_4 = model::Model::new_cube(0.1, Point::new(0.2, 0., 1.));
+    let cube_3 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 0.5));
+    let cube_4 = model::Model::new_cube(0.1, Point::new(0.2, 0., 0.5));
 
-    let cube_5 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 2.));
-    let cube_6 = model::Model::new_cube(0.1, Point::new(0.2, 0., 2.));
+    let cube_5 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 1.));
+    let cube_6 = model::Model::new_cube(0.1, Point::new(0.2, 0., 1.));
 
-    let cube_7 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 3.));
-    let cube_8 = model::Model::new_cube(0.1, Point::new(0.2, 0., 3.));
+    let cube_7 = model::Model::new_cube(0.1, Point::new(-0.2, 0., 1.5));
+    let cube_8 = model::Model::new_cube(0.1, Point::new(0.2, 0., 1.5));
 
     loop {
         camera.screen.fit_to_terminal();
