@@ -51,6 +51,7 @@ impl Camera {
         }
     }
 
+    // Convert world to camera coordinates.
     fn world_to_camera(&self, point: &Point) -> Point {
         // Compute trig values for camera angles.
         let (s_yaw, s_pitch, s_roll) = (self.yaw.sin(), self.pitch.sin(), self.roll.sin());
@@ -79,6 +80,7 @@ impl Camera {
         Point::new(unrolled_x, unrolled_y, unrolled_z)
     }
 
+    // Convert camera to screen coordinates.
     fn camera_to_screen(&self, point: &Point) -> screen::Point {
         // Project onto viewport coordinates.
         let viewport_x = point.x * self.viewport_distance / point.z;
@@ -96,11 +98,17 @@ impl Camera {
         screen::Point::new(screen_x.round() as i32, screen_y.round() as i32)
     }
 
-    pub fn plot_model(&mut self, model: &model::Model) {
+    // Plot points of a given model.
+    #[allow(dead_code)]
+    pub fn plot_model_points(&mut self, model: &model::Model) {
         for point in model.points.iter() {
             self.write(true, &model.model_to_world(point));
         }
+    }
 
+    // Plot edges of a given model.
+    #[allow(dead_code)]
+    pub fn plot_model_edges(&mut self, model: &model::Model) {
         for edge in model.edges.iter() {
             self.edge( 
                 &model.model_to_world(&edge.0),
