@@ -67,6 +67,144 @@ impl Model {
         }
     }
 
+    // Creates a model from a .obj file.
+    pub fn new_obj(path: &str, position: three::Point) -> Result<Model, &str> {
+
+        // Read the file.
+        let Ok(mut code) = std::fs::read_to_string(path) else 
+            { return Err("Error reading path.") };
+
+        // Start by pre-processing our code, to convert '\' chars followed by a newline, 
+        // to the same line as the backslash, seperated by whitespace.
+        code = code.replace("\\\n", " ");
+        
+        // Destination data.
+        let mut vertices = Vec::<three::Point>::new();
+
+        // These vectors contain indicies to the vertices they refer to.
+        let mut lines = Vec::<Vec<usize>>::new();
+        let mut faces = Vec::<Vec<usize>>::new();
+
+        for line in code.split('\n') {
+            // Extract tokens split by whitespace.
+            let mut tokens = line
+                .split_whitespace()
+                .filter(|&line| !line.is_empty());
+
+            // Identify the command.
+            match tokens.next() {
+                // Handle vertex.
+                Some("v") => {
+                    match (tokens.next(), tokens.next(), tokens.next(), tokens.next(), tokens.next()) {
+                        (Some(x), Some(y), Some(z), _, None) => {
+                            let Ok(x) = x.parse::<f32>() else { return Err("Invalid value for x.") };
+                            let Ok(y) = y.parse::<f32>() else { return Err("Invalid value for y.") };
+                            let Ok(z) = z.parse::<f32>() else { return Err("Invalid value for z.") };
+
+                            vertices.push(three::Point::new(x, y, z));
+                        }
+                        _ => { return Err("Invalid pattern.") }
+                    }
+                }
+                
+                // Handle line.
+                Some("l") => {
+                    let mut line = Vec::<usize>::new();
+                    for point in tokens {
+
+                        // A line is made of point tokens, split by forward slashes.
+                        // We only care about the first value.
+                        let mut params = point.split('/');
+
+                        // Get the vertext index, and push it to the line.
+                        match (params.next(), params.next(), params.next()) {
+                            (Some(vertex_index), _, None) => {
+                                let Ok(vertex_index) = vertex_index.parse::<usize>() else {return Err("Invalid index.")};
+                                let Some(vertex_index) = vertex_index.checked_sub(1) else {return Err("Invalid index.")};
+
+                                line.push(vertex_index);
+                            }
+                            _ => { return Err("Invalid pattern.") }
+                        }
+                    }
+
+                    lines.push(line);
+                } 
+
+                // Handle Face.
+                Some("f") | Some("fo") => {
+                    let mut face = Vec::<usize>::new();
+                    for point in tokens {
+
+                        // A line is made of point tokens, split by forward slashes.
+                        // We only care about the first value.
+                        let mut params = point.split('/');
+
+                        // Get the vertext index, and push it to the line.
+                        match (params.next(), params.next(), params.next(), params.next()) {
+                            (Some(vertex_index), _, _, None) => {
+                                let Ok(vertex_index) = vertex_index.parse::<usize>() else {return Err("Invalid index.")};
+                                let Some(vertex_index) = vertex_index.checked_sub(1) else {return Err("Invalid index.")};
+
+                                face.push(vertex_index);
+                            }
+                            _ => { return Err("Invalid pattern.") }
+                        }
+                    }
+
+                    faces.push(face);
+                }
+
+                // Handle comments with no action.
+                Some("#") => {}
+
+                // Handle unsupported keywords with no action.
+                _ => {}
+            }
+        }
+
+        // Convert face and line lists to a list of tuples representing edges.
+        let mut edges = Vec::<(usize, usize)>::new();
+        for line in lines.iter() {
+            if line.len() >= 2 {
+                for start in 0..line.len() - 1 {
+                    let end = start + 1;
+                    edges.push((line[start], line[end]));
+                }
+            }
+        }
+        for face in faces.iter() {
+            if face.len() >= 2 {
+                for start in 0..face.len() - 1 {
+                    let end = start + 1;
+                    edges.push((face[start], face[end]));
+                }
+
+                // Handle the closing edge.
+                edges.push((
+                    face.last().unwrap().clone(), 
+                    face.first().unwrap().clone()
+                ));
+            }   
+        }
+
+        // Remove duplicates for performance.
+        edges.sort();
+        edges.dedup();
+
+        // Convert edges to actual points.
+        let edges: Vec<(three::Point, three::Point)> = edges.into_iter().map(
+            |(start_index, end_index)| 
+                (vertices[start_index], vertices[end_index])
+        ).collect();
+
+        Ok(Model{
+            points: vertices,
+            edges: edges,
+            position: position,
+        })
+    }
+
     pub fn model_to_world(&self, point: &three::Point) -> three::Point {
         three::Point{
             x: point.x + self.position.x,
