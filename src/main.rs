@@ -1,4 +1,4 @@
-use std::thread;
+use std::*;
 
 use termion::raw::IntoRawMode;
 use termion::input::MouseTerminal;
@@ -10,7 +10,7 @@ mod three;
 mod model;
 
 fn main() {
-    let args: Vec<String> = std::env::args().collect();
+    let args: Vec<String> = env::args().collect();
     if args.len() > 2 {
         panic!("Please supply only one file path to visualize.");
     }
@@ -21,11 +21,11 @@ fn main() {
     let file_path = &args[1];
 
     // Put stdout in raw mode with mouse events enabled.
-    let _raw_terminal = MouseTerminal::from(std::io::stdout().into_raw_mode().unwrap());
+    let _raw_terminal = MouseTerminal::from(io::stdout().into_raw_mode().unwrap());
 
     // Load model.
     let input_model = model::Model:: new_obj(
-        &file_path,
+        file_path,
         three::Point::new(
             0., 0., 0.
         )
@@ -52,16 +52,16 @@ fn main() {
     // Start main loop.
     let mut running = true;
     while running {
-        let start = std::time::Instant::now();
+        let start = time::Instant::now();
         // Take mouse input, and extract mouse speed.
         let mut event_count = 0;
-        for event in (&mut events).flatten() {
+        for event in &mut events {
             event_count += 1;
             match event {
-                Event::Key(Key::Ctrl('c')) => { running = false }
-                Event::Key(Key::Char('+')) => { distance_to_model *= 0.97}
-                Event::Key(Key::Char('-')) => { distance_to_model *= 1.03}
-                Event::Mouse(mouse_event) => match mouse_event {
+                Ok(Event::Key(Key::Ctrl('c'))) => { running = false }
+                Ok(Event::Key(Key::Char('+'))) => { distance_to_model *= 0.97}
+                Ok(Event::Key(Key::Char('-'))) => { distance_to_model *= 1.03}
+                Ok(Event::Mouse(mouse_event)) => match mouse_event {
                     MouseEvent::Press(_, x, y) => {
                         last_mouse_position.x = x as i32;
                         last_mouse_position.y = y as i32;
@@ -72,15 +72,9 @@ fn main() {
                         last_mouse_position.x = x as i32;
                         last_mouse_position.y = y as i32;
                     }
-                    _ => {
-                        mouse_speed.x = 0;
-                        mouse_speed.y = 0;
-                    }
+                    _ => {}
                 }
-                _ => {
-                    mouse_speed.x = 0;
-                    mouse_speed.y = 0;
-                }
+                _ => {}
             }
         }
         if event_count == 0 {
@@ -105,9 +99,8 @@ fn main() {
         camera.plot_model_edges(&input_model);
         camera.screen.render();
         
-        match std::time::Duration::from_millis(16).checked_sub(start.elapsed()) {
-            Some(time) => { thread::sleep(time); }
-            None => {}
+        if let Some(time) = time::Duration::from_millis(16).checked_sub(start.elapsed()) { 
+            thread::sleep(time);
         }
 
         // Print info.

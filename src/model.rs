@@ -1,5 +1,24 @@
 use crate::three;
-use std::iter;
+use std::*;
+
+#[derive(Debug)]
+struct ObjParseError;
+
+impl ObjParseError {
+    fn new() -> ObjParseError {ObjParseError}
+}
+
+impl fmt::Display for ObjParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Error parsing .obj file.")
+    }
+}
+
+impl error::Error for ObjParseError {
+    fn description(&self) -> &str {
+        "Error parsing .obj file."
+    }
+}
 
 // Simple 3d point wrapper.
 pub struct Model {
@@ -69,11 +88,10 @@ impl Model {
     }
 
     // Creates a model from a .obj file.
-    pub fn new_obj(path: &str, position: three::Point) -> Result<Model, &str> {
+    pub fn new_obj(path: &str, position: three::Point) -> Result<Model, Box<dyn error::Error>> {
 
         // Read the file.
-        let Ok(mut code) = std::fs::read_to_string(path) else 
-            { return Err("Error reading path.") };
+        let mut code = fs::read_to_string(path)?;
 
         // Start by pre-processing our code, to convert '\' chars followed by a newline, 
         // to the same line as the backslash, seperated by whitespace.
@@ -98,13 +116,12 @@ impl Model {
                 Some("v") => {
                     match (tokens.next(), tokens.next(), tokens.next(), tokens.next(), tokens.next()) {
                         (Some(x), Some(y), Some(z), _, None) => {
-                            let Ok(x) = x.parse::<f32>() else { return Err("Invalid value for x.") };
-                            let Ok(y) = y.parse::<f32>() else { return Err("Invalid value for y.") };
-                            let Ok(z) = z.parse::<f32>() else { return Err("Invalid value for z.") };
-
+                            let x = x.parse::<f32>()?;
+                            let y = y.parse::<f32>()?;
+                            let z = z.parse::<f32>()?;
                             vertices.push(three::Point::new(x, y, z));
                         }
-                        _ => { return Err("Invalid pattern.") }
+                        _ => { return Err(Box::from(ObjParseError::new())) }
                     }
                 }
                 
@@ -120,12 +137,16 @@ impl Model {
                         // Get the vertext index, and push it to the line.
                         match (params.next(), params.next(), params.next()) {
                             (Some(vertex_index), _, None) => {
-                                let Ok(vertex_index) = vertex_index.parse::<usize>() else {return Err("Invalid index.")};
-                                let Some(vertex_index) = vertex_index.checked_sub(1) else {return Err("Invalid index.")};
+                                let Ok(vertex_index) = vertex_index.parse::<usize>() else {
+                                    return Err(Box::from(ObjParseError::new()))
+                                };
+                                let Some(vertex_index) = vertex_index.checked_sub(1) else {
+                                    return Err(Box::from(ObjParseError::new()))
+                                };
 
                                 line.push(vertex_index);
                             }
-                            _ => { return Err("Invalid pattern.") }
+                            _ => { return Err(Box::from(ObjParseError::new())) }
                         }
                     }
 
@@ -144,12 +165,12 @@ impl Model {
                         // Get the vertext index, and push it to the line.
                         match (params.next(), params.next(), params.next(), params.next()) {
                             (Some(vertex_index), _, _, None) => {
-                                let Ok(vertex_index) = vertex_index.parse::<usize>() else {return Err("Invalid index.")};
-                                let Some(vertex_index) = vertex_index.checked_sub(1) else {return Err("Invalid index.")};
+                                let Ok(vertex_index) = vertex_index.parse::<usize>() else {return Err(Box::from(ObjParseError::new()))};
+                                let Some(vertex_index) = vertex_index.checked_sub(1) else {return Err(Box::from(ObjParseError::new()))};
 
                                 face.push(vertex_index);
                             }
-                            _ => { return Err("Invalid pattern.") }
+                            _ => { return Err(Box::from(ObjParseError::new())) }
                         }
                     }
 
@@ -183,8 +204,8 @@ impl Model {
 
                 // Handle the closing edge.
                 edges.push((
-                    face.last().unwrap().clone(), 
-                    face.first().unwrap().clone()
+                    *face.last().unwrap(), 
+                    *face.first().unwrap()
                 ));
             }   
         }
@@ -201,8 +222,8 @@ impl Model {
 
         Ok(Model{
             points: vertices,
-            edges: edges,
-            position: position,
+            edges,
+            position,
         })
     }
 
@@ -238,10 +259,12 @@ impl Model {
             z_bounds.1 = f32::max(point.z, z_bounds.1);
         }
 
-        self.model_to_world(&three::Point::new(
-            (x_bounds.0 + x_bounds.1) / 2., 
-            (y_bounds.0 + y_bounds.1) / 2., 
-            (z_bounds.0 + z_bounds.1) / 2.)
+        self.model_to_world(
+            &three::Point::new(
+                (x_bounds.0 + x_bounds.1) / 2., 
+                (y_bounds.0 + y_bounds.1) / 2., 
+                (z_bounds.0 + z_bounds.1) / 2.
+            )
         )
     }
 
