@@ -30,7 +30,12 @@ fn main() {
             0., 0., 0.
         )
     ).unwrap();
-    let center = input_model.center();
+    let bounds = input_model.world_bounds();
+    let center = input_model.model_to_world(&three::Point::new(
+        (bounds.0.x + bounds.1.x) / 2., 
+        (bounds.0.y + bounds.1.y) / 2., 
+        (bounds.0.z + bounds.1.z) / 2., 
+    ));
 
     // Setup camera.
     let mut camera = three::Camera::new(
@@ -42,7 +47,11 @@ fn main() {
     // Setup viewer params (relative to model).
     let mut view_yaw: f32 = 0.0;
     let mut view_pitch: f32 = 0.0;
-    let mut distance_to_model: f32 = input_model.max_radius() * 2.;
+    let mut distance_to_model = 1.5 * (
+        (bounds.0.x - bounds.1.x).powi(2) +
+        (bounds.0.y - bounds.1.y).powi(2) +
+        (bounds.0.z - bounds.1.z).powi(2)
+    ).sqrt();
 
     // Setup events.
     let mut events = termion::async_stdin().events();
@@ -97,6 +106,7 @@ fn main() {
         camera.screen.fit_to_terminal();
         camera.screen.clear();
         camera.plot_model_edges(&input_model);
+        camera.write(true, &center);
         camera.screen.render();
         
         if let Some(time) = time::Duration::from_millis(16).checked_sub(start.elapsed()) { 

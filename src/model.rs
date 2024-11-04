@@ -235,67 +235,32 @@ impl Model {
         }
     }
 
-    // Returns the center of the bounding box of the model.
-    pub fn center(&self) -> three::Point {
-        let mut x_bounds: (f32, f32) = (self.points[0].x, self.points[0].x);
-        let mut y_bounds: (f32, f32) = (self.points[0].y, self.points[0].y);
-        let mut z_bounds: (f32, f32) = (self.points[0].z, self.points[0].z);
-
-        for point in &self.points {
-            x_bounds.0 = f32::min(point.x, x_bounds.0);
-            x_bounds.1 = f32::max(point.x, x_bounds.1);
-            y_bounds.0 = f32::min(point.y, y_bounds.0);
-            y_bounds.1 = f32::max(point.y, y_bounds.1);
-            z_bounds.0 = f32::min(point.z, z_bounds.0);
-            z_bounds.1 = f32::max(point.z, z_bounds.1);
-        }
-
-        for point in self.edges.iter().flat_map(|tup| iter::once(tup.0).chain(iter::once(tup.1))) {
-            x_bounds.0 = f32::min(point.x, x_bounds.0);
-            x_bounds.1 = f32::max(point.x, x_bounds.1);
-            y_bounds.0 = f32::min(point.y, y_bounds.0);
-            y_bounds.1 = f32::max(point.y, y_bounds.1);
-            z_bounds.0 = f32::min(point.z, z_bounds.0);
-            z_bounds.1 = f32::max(point.z, z_bounds.1);
-        }
-
-        self.model_to_world(
-            &three::Point::new(
-                (x_bounds.0 + x_bounds.1) / 2., 
-                (y_bounds.0 + y_bounds.1) / 2., 
-                (z_bounds.0 + z_bounds.1) / 2.
+    // Returns the min and max bounds of the model in model space (rectangular prism).
+    pub fn world_bounds(&self) -> (three::Point, three::Point) {
+        if self.points.len() == 0 && self.edges.len() == 0 {
+            return (
+                three::Point::new(0., 0., 0.), 
+                three::Point::new(0., 0., 0.)
             )
-        )
-    }
-
-    // Returns the max radius of the obejct.
-    pub fn max_radius(&self) -> f32 {
-        let furthest_point = self.points.iter().max_by(
-            |a, b| 
-                (a.x.powi(2) + a.y.powi(2) + a.z.powi(2)).total_cmp(&(b.x.powi(2) + b.y.powi(2) + b.z.powi(2)))
-        );
-
-        let furthest_edge_point = self.edges.iter()
-            .flat_map(|tup| iter::once(tup.0).chain(iter::once(tup.1)))
-            .max_by(
-                |a, b| 
-                    (a.x.powi(2) + a.y.powi(2) + a.z.powi(2)).total_cmp(&(b.x.powi(2) + b.y.powi(2) + b.z.powi(2)))
-            );
-
-        match (furthest_point, furthest_edge_point) {
-            (Some(point), None) => {
-                (point.x.powi(2) + point.y.powi(2) + point.z.powi(2)).sqrt()
-            }
-            (None, Some(point)) => {
-                (point.x.powi(2) + point.y.powi(2) + point.z.powi(2)).sqrt()
-            }
-            (Some(point_1), Some(point_2)) => {
-                let dist_1 = (point_1.x.powi(2) + point_1.y.powi(2) + point_1.z.powi(2)).sqrt();
-                let dist_2 = (point_2.x.powi(2) + point_2.y.powi(2) + point_2.z.powi(2)).sqrt();
-                f32::max(dist_1, dist_2)
-            }
-            _ => {0.}
         }
-    }
 
+        let mut min_bounds = self.points[0];
+        let mut max_bounds = self.points[0];
+
+        let points_including_edges = self.edges.iter()
+            .flat_map(|tup| iter::once(&tup.0).chain(iter::once(&tup.1)))
+            .chain(self.points.iter());
+
+        for point in points_including_edges {
+            min_bounds.x = f32::min(point.x, min_bounds.x);
+            min_bounds.y = f32::min(point.y, min_bounds.y);
+            min_bounds.z = f32::min(point.z, min_bounds.z);
+
+            max_bounds.x = f32::max(point.x, max_bounds.x);
+            max_bounds.y = f32::max(point.y, max_bounds.y);
+            max_bounds.z = f32::max(point.z, max_bounds.z);
+        }
+
+        (min_bounds, max_bounds)
+    }
 }
