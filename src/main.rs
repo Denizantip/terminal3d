@@ -4,10 +4,16 @@ use termion::raw::IntoRawMode;
 use termion::input::MouseTerminal;
 use termion::input::TermRead;
 use termion::event::*;
+use time::Duration;
 
 mod screen;
 mod three;
 mod model;
+
+const VIEWPORT_FOV: f32 = 1.7;
+const VIEWPORT_DISTANCE: f32 = 0.1;
+const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(16);
+const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -41,27 +47,31 @@ fn main() {
     let mut camera = three::Camera::new(
         center, 
         0., 0., 0., 
-        0.1, 1.7,
+        VIEWPORT_DISTANCE, VIEWPORT_FOV,
     );
 
     // Setup viewer params (relative to model).
     let mut view_yaw: f32 = 0.0;
     let mut view_pitch: f32 = 0.0;
-    let mut distance_to_model = 1.5 * (
+    let mut distance_to_model = (
         (bounds.0.x - bounds.1.x).powi(2) +
         (bounds.0.y - bounds.1.y).powi(2) +
         (bounds.0.z - bounds.1.z).powi(2)
-    ).sqrt();
+    ).sqrt() * INITIAL_DISTANCE_MULTIPLIER;
 
     // Setup events.
     let mut events = termion::async_stdin().events();
-    let mut mouse_speed = screen::Point::new(0, 0);
+    let mut mouse_speed: (f32, f32) = (0., 0.);
     let mut last_mouse_position = screen::Point::new(0, 0);
+
+    // The actual, non-target time of each frame
+    let mut duration_per_frame = TARGET_DURATION_PER_FRAME;
 
     // Start main loop.
     let mut running = true;
     while running {
         let start = time::Instant::now();
+
         // Take mouse input, and extract mouse speed.
         let mut event_count = 0;
         for event in &mut events {
@@ -75,9 +85,12 @@ fn main() {
                         last_mouse_position.x = x as i32;
                         last_mouse_position.y = y as i32;
                     }
+
                     MouseEvent::Hold(x, y) => {
-                        mouse_speed.x = ((x as f32 - last_mouse_position.x as f32) / camera.screen.width as f32 * 2500.) as i32;
-                        mouse_speed.y = ((last_mouse_position.y as f32 - y as f32) / camera.screen.width as f32 * 2500.) as i32;
+                        let delta_x = x as f32 - last_mouse_position.x as f32;
+                        let delta_y = last_mouse_position.y as f32 - y as f32;
+                        mouse_speed.0 = delta_x / camera.screen.width as f32 / duration_per_frame.as_secs_f32();
+                        mouse_speed.1 = delta_y / camera.screen.width as f32 / duration_per_frame.as_secs_f32();
                         last_mouse_position.x = x as i32;
                         last_mouse_position.y = y as i32;
                     }
@@ -87,13 +100,13 @@ fn main() {
             }
         }
         if event_count == 0 {
-            mouse_speed.x = 0;
-            mouse_speed.y = 0;
+            mouse_speed.0 = 0.;
+            mouse_speed.1 = 0.;
         }
 
         // Update viewer params.
-        view_yaw -= mouse_speed.x as f32 / 100.;
-        view_pitch -= mouse_speed.y as f32 / 100.;
+        view_yaw -= mouse_speed.0;
+        view_pitch -= mouse_speed.1;
 
         // Update camera position.
         camera.coordinates.z = -view_yaw.cos() * view_pitch.cos() * distance_to_model + center.z;
@@ -106,10 +119,10 @@ fn main() {
         camera.screen.fit_to_terminal();
         camera.screen.clear();
         camera.plot_model_edges(&input_model);
-        camera.write(true, &center);
         camera.screen.render();
         
-        if let Some(time) = time::Duration::from_millis(16).checked_sub(start.elapsed()) { 
+        // Add buffer time to hit 60 fps.
+        if let Some(time) = TARGET_DURATION_PER_FRAME.checked_sub(start.elapsed()) { 
             thread::sleep(time);
         }
 
@@ -119,7 +132,9 @@ fn main() {
             termion::clear::CurrentLine,
             camera.coordinates.x, camera.coordinates.y, camera.coordinates.z,
             camera.yaw, camera.pitch, camera.roll,
-            1. / start.elapsed().as_secs_f32()
+            1. / duration_per_frame.as_secs_f32()
         );
+
+        duration_per_frame = start.elapsed();
     }
 }
