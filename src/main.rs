@@ -12,7 +12,8 @@ mod model;
 
 const VIEWPORT_FOV: f32 = 1.7;
 const VIEWPORT_DISTANCE: f32 = 0.1;
-const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(16);
+const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 60);
+const MOUSE_SPEED_MULTIPLIER: f32 = 0.4;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 
 fn main() {
@@ -71,6 +72,7 @@ fn main() {
     let mut running = true;
     while running {
         let start = time::Instant::now();
+        let mut start_mouse_position = last_mouse_position;
 
         // Take mouse input, and extract mouse speed.
         let mut event_count = 0;
@@ -84,16 +86,18 @@ fn main() {
                     MouseEvent::Press(_, x, y) => {
                         last_mouse_position.x = x as i32;
                         last_mouse_position.y = y as i32;
+                        start_mouse_position = last_mouse_position;
                     }
 
                     MouseEvent::Hold(x, y) => {
-                        let delta_x = x as f32 - last_mouse_position.x as f32;
-                        let delta_y = last_mouse_position.y as f32 - y as f32;
-                        mouse_speed.0 = delta_x / camera.screen.width as f32 / duration_per_frame.as_secs_f32();
-                        mouse_speed.1 = delta_y / camera.screen.width as f32 / duration_per_frame.as_secs_f32();
+                        let delta_x = x as f32 - start_mouse_position.x as f32;
+                        let delta_y = start_mouse_position.y as f32 - y as f32;
+                        mouse_speed.0 = delta_x / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
+                        mouse_speed.1 = delta_y / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
                         last_mouse_position.x = x as i32;
                         last_mouse_position.y = y as i32;
                     }
+
                     _ => {}
                 }
                 _ => {}

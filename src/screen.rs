@@ -26,6 +26,7 @@ fn pixel_to_char(pixel: &Pixel) -> char {
 }
 
 // Simple 2d point wrapper.
+#[derive(Copy, Clone)]
 pub struct Point {
     pub x: i32,
     pub y: i32
