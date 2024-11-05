@@ -1,5 +1,6 @@
 use std::*;
 use process::exit;
+use screen::{BlockPixel, BrailePixel};
 use time::Duration;
 
 use crossterm::{
@@ -176,16 +177,16 @@ fn main() {
         camera.pitch = -view_pitch;
 
         // Render.
-        if braile_mode { camera.screen.fit_braile_to_terminal() }
-        else { camera.screen.fit_block_to_terminal() }
+        if braile_mode { camera.screen.fit_to_terminal::<BrailePixel>()  }
+        else { camera.screen.fit_to_terminal::<BlockPixel>() }
 
         camera.screen.clear();
 
         if points_mode { camera.plot_model_points(&input_model) }
         else { camera.plot_model_edges(&input_model) }
 
-        if braile_mode { camera.screen.render_braile() }
-        else { camera.screen.render_block() }
+        if braile_mode { camera.screen.render::<screen::BrailePixel>() }
+        else { camera.screen.render::<screen::BlockPixel>() }
         
         // Add buffer time to hit 60 fps.
         if let Some(time) = TARGET_DURATION_PER_FRAME.checked_sub(start.elapsed()) { 

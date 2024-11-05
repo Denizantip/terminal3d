@@ -1,4 +1,4 @@
-use std::io;
+use std::*;
 use crossterm::{
     execute, 
     terminal,
@@ -6,62 +6,71 @@ use crossterm::{
     style
 };
 
+const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
+
 // Setup ability to get dimensions out of matrix arrays.
 pub trait Dim {
     const WIDTH: usize;
     const HEIGHT: usize;
 }
 
-impl<T, const WIDTH: usize, const HEIGHT: usize> Dim for [[T; WIDTH]; HEIGHT] {
+impl<const WIDTH: usize, const HEIGHT: usize> Dim for [[bool; WIDTH]; HEIGHT] {
     const WIDTH: usize = WIDTH;
     const HEIGHT: usize = HEIGHT;
 }
 
-const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
+// Create pixel trait.
+pub trait Pixel: Dim + ops::IndexMut<usize, Output=[bool; 2]> + Clone {
+    fn new() -> Self;
+    fn to_char(&self) -> char;
+}
 
 // Pixel types, represent a single char.
-type BlockPixel = [[bool; 2]; 2];
-type BrailePixel = [[bool; 2]; 4];
-
-// Handle block pixel to char conversion.
-fn block_pixel_to_char(pixel: &BlockPixel) -> char {
-    match pixel {
-        [[false, false], [false, false]] => ' ',
-        [[true, false], [false, false]] => '▘',
-        [[false, true], [false, false]] => '▝',
-        [[true, true], [false, false]] => '▀',
-        [[false, false], [true, false]] => '▖',
-        [[true, false], [true, false]] => '▌',
-        [[false, true], [true, false]] => '▞',
-        [[true, true], [true, false]] => '▛',
-        [[false, false], [false, true]] => '▗',
-        [[true, false], [false, true]] => '▚',
-        [[false, true], [false, true]] => '▐',
-        [[true, true], [false, true]] => '▜',
-        [[false, false], [true, true]] => '▄',
-        [[true, false], [true, true]] => '▙',
-        [[false, true], [true, true]] => '▟',
-        [[true, true], [true, true]] => '█'
+pub type BlockPixel = [[bool; 2]; 2];
+impl Pixel for BlockPixel {
+    fn new() -> BlockPixel { [[false; BlockPixel::WIDTH]; BlockPixel::HEIGHT] }
+    fn to_char(&self) -> char {
+        match self {
+            [[false, false], [false, false]] => ' ',
+            [[true, false], [false, false]] => '▘',
+            [[false, true], [false, false]] => '▝',
+            [[true, true], [false, false]] => '▀',
+            [[false, false], [true, false]] => '▖',
+            [[true, false], [true, false]] => '▌',
+            [[false, true], [true, false]] => '▞',
+            [[true, true], [true, false]] => '▛',
+            [[false, false], [false, true]] => '▗',
+            [[true, false], [false, true]] => '▚',
+            [[false, true], [false, true]] => '▐',
+            [[true, true], [false, true]] => '▜',
+            [[false, false], [true, true]] => '▄',
+            [[true, false], [true, true]] => '▙',
+            [[false, true], [true, true]] => '▟',
+            [[true, true], [true, true]] => '█'
+        }
     }
 }
 
-// Handle braile pixel to char conversion.
-fn braile_pixel_to_char(pixel: &BrailePixel) -> char {
-    let mut unicode: u32 = 0;
-    if pixel[0][0] { unicode |= 1 << 0 }
-    if pixel[1][0] { unicode |= 1 << 1 }
-    if pixel[2][0] { unicode |= 1 << 2 }
-
-    if pixel[0][1] { unicode |= 1 << 3 }
-    if pixel[1][1] { unicode |= 1 << 4 }
-    if pixel[2][1] { unicode |= 1 << 5 }
-
-    if pixel[3][0] { unicode |= 1 << 6 }
-    if pixel[3][1] { unicode |= 1 << 7 }
-
-    unicode |= 0x28 << 8;
-
-    char::from_u32(unicode).unwrap()
+pub type BrailePixel = [[bool; 2]; 4];
+impl Pixel for BrailePixel {
+    fn new() -> BrailePixel { [[false; BrailePixel::WIDTH]; BrailePixel::HEIGHT] }
+    fn to_char(&self) -> char {
+        let mut unicode: u32 = 0;
+        if self[0][0] { unicode |= 1 << 0 }
+        if self[1][0] { unicode |= 1 << 1 }
+        if self[2][0] { unicode |= 1 << 2 }
+    
+        if self[0][1] { unicode |= 1 << 3 }
+        if self[1][1] { unicode |= 1 << 4 }
+        if self[2][1] { unicode |= 1 << 5 }
+    
+        if self[3][0] { unicode |= 1 << 6 }
+        if self[3][1] { unicode |= 1 << 7 }
+    
+        unicode |= 0x28 << 8;
+    
+        char::from_u32(unicode).unwrap()
+    }
 }
 
 // Simple 2d point wrapper.
@@ -104,28 +113,15 @@ impl Screen {
     }
 
     // Resize braile screen to fit terminal width and height.
-    pub fn fit_braile_to_terminal(&mut self) {
+    pub fn fit_to_terminal<T: Pixel>(&mut self) {
         let (terminal_width, terminal_height) = match terminal::size() {
             Ok(dim) => dim,
             Err(_) => DEFAULT_TERMINAL_DIMENSIONS
         };
 
         self.resize(
-            terminal_width * BrailePixel::WIDTH as u16, 
-            (terminal_height - 1) * BrailePixel::HEIGHT as u16
-        );
-    }
-
-    // Resize block screen to fit terminal width and height.
-    pub fn fit_block_to_terminal(&mut self) {
-        let (terminal_width, terminal_height) = match terminal::size() {
-            Ok(dim) => dim,
-            Err(_) => DEFAULT_TERMINAL_DIMENSIONS
-        };
-
-        self.resize(
-            terminal_width *  BlockPixel::WIDTH as u16, 
-            (terminal_height - 1) *  BlockPixel::HEIGHT as u16
+            terminal_width * T::WIDTH as u16, 
+            (terminal_height - 1) * T::HEIGHT as u16
         );
     }
 
@@ -202,24 +198,22 @@ impl Screen {
         }
     }
 
-    // Render the screen in blocks.
-    pub fn render_block(&self) {
+    // Render the screen in the given pixel.
+    pub fn render<PixelType: Pixel>(&self) {
         execute!(
             io::stdout(),
             cursor::MoveTo(0, 0)
         ).unwrap();
 
         // Chunk rows by the height of a single pixel.
-        let chunked_rows = self.content.chunks(BlockPixel::HEIGHT);
+        let chunked_rows = self.content.chunks(PixelType::HEIGHT);
 
         // Run through chunks.
         for subrows in chunked_rows {
 
             // Produce a "real row" - a row of Pixel types.
-            let real_row_width = self.width.div_ceil(BlockPixel::WIDTH as u16) as usize;
-            let mut real_row = vec![[
-                [false; BlockPixel::WIDTH]; BlockPixel::HEIGHT
-            ]; real_row_width];
+            let real_row_width = self.width.div_ceil(PixelType::WIDTH as u16) as usize;
+            let mut real_row = vec![PixelType::new(); real_row_width];
 
             // Run through every subrow, where subpixel_y is the y index within the pixel.
             for (subpixel_y, subrow) in subrows.iter().enumerate() {
@@ -239,50 +233,7 @@ impl Screen {
 
             // Render.
             for pixel in real_row {
-                execute!(io::stdout(), style::Print(block_pixel_to_char(&pixel))).unwrap();
-            }
-            execute!(io::stdout(), style::Print("\r\n")).unwrap();
-        }
-    }
-
-    // Render the screen in braile.
-    pub fn render_braile(&self) {
-        execute!(
-            io::stdout(),
-            cursor::MoveTo(0, 0)
-        ).unwrap();
-
-        // Chunk rows by the height of a single pixel.
-        let chunked_rows = self.content.chunks(BrailePixel::HEIGHT);
-
-        // Run through chunks.
-        for subrows in chunked_rows {
-
-            // Produce a "real row" - a row of Pixel types.
-            let real_row_width = self.width.div_ceil(BrailePixel::WIDTH as u16) as usize;
-            let mut real_row = vec![[
-                [false; BrailePixel::WIDTH]; BrailePixel::HEIGHT
-            ]; real_row_width];
-
-            // Run through every subrow, where subpixel_y is the y index within the pixel.
-            for (subpixel_y, subrow) in subrows.iter().enumerate() {
-
-                // Chunk the subrow by the width of the pixel.
-                let chunked_subrow = subrow.chunks_exact(2);
-                let remainder = chunked_subrow.remainder();
-
-                // Update real row.
-                for (real_x, pixel_row) in chunked_subrow.enumerate() {
-                    real_row[real_x][subpixel_y][..pixel_row.len()].copy_from_slice(pixel_row);
-                }
-                
-                // Handle remainder (indivisible width).
-                real_row[real_row_width - 1][subpixel_y][..remainder.len()].copy_from_slice(remainder);
-            }
-
-            // Render.
-            for pixel in real_row {
-                execute!(io::stdout(), style::Print(braile_pixel_to_char(&pixel))).unwrap();
+                execute!(io::stdout(), style::Print(pixel.to_char())).unwrap();
             }
             execute!(io::stdout(), style::Print("\r\n")).unwrap();
         }
