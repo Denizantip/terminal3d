@@ -17,7 +17,7 @@ mod model;
 // Config.
 const VIEWPORT_FOV: f32 = 1.7;
 const VIEWPORT_DISTANCE: f32 = 0.1;
-const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 1000);
+const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 60);
 const MOUSE_SPEED_MULTIPLIER: f32 = 30.;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 const SCROLL_MULTIPLER: f32 = 0.03;
