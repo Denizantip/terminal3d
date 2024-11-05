@@ -1,3 +1,10 @@
+use std::io;
+use crossterm::{
+    execute, 
+    terminal,
+    cursor
+};
+
 // Pixel type, represents a chunk of 4 cells, 
 // to be converted to a single char on the screen.
 // Order is top-left, top-right, bottom-left, bottom-right.
@@ -44,23 +51,27 @@ pub struct Screen {
     pub width: u16,
     pub height: u16,
     content: Vec<Vec<bool>>,
+    stdout: io::Stdout
 }
 
 impl Screen {
     // Create a new screen, sized to the terminal.
     pub fn new() -> Screen {
+        let mut stdout = io::stdout();
+
         // Clear term and go to 0, 0.
-        print!(
-            "{}{}", 
-            termion::clear::All, 
-            termion::cursor::Goto(1, 1)
-        );
+        execute!(
+            stdout,
+            cursor::MoveTo(0, 0),
+            terminal::Clear(terminal::ClearType::All)
+        ).unwrap();
 
         // Create screen.
         let mut res = Screen{
             content: Vec::new(),
             width: 0,
-            height: 0
+            height: 0,
+            stdout
         };
 
         // Fit to terminal and return.
@@ -73,7 +84,7 @@ impl Screen {
         let (
             terminal_width, 
             terminal_height
-        ) = termion::terminal_size().unwrap();
+        ) = terminal::size().unwrap();
         self.resize(terminal_width * 2, (terminal_height - 1) * 2);
     }
 
@@ -152,8 +163,11 @@ impl Screen {
     }
 
     // Render the screen.
-    pub fn render(&self) {
-        print!("{}", termion::cursor::Goto(1, 1));
+    pub fn render(&mut self) {
+        execute!(
+            self.stdout,
+            cursor::MoveTo(0, 0)
+        ).unwrap();
 
         for real_y in 0..(self.height / 2) {
             // Extract the relavent rows in the content matrix.

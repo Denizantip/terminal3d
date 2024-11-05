@@ -1,11 +1,11 @@
 use std::*;
-
-use termion::raw::IntoRawMode;
-use termion::input::MouseTerminal;
-use termion::input::TermRead;
-use termion::event::*;
 use time::Duration;
 
+use crossterm::{
+    event,
+    execute,
+    terminal,
+};
 mod screen;
 mod three;
 mod model;
@@ -17,6 +17,14 @@ const MOUSE_SPEED_MULTIPLIER: f32 = 0.4;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 
 fn main() {
+    // Setup raw mode, mouse capture, and event stream.
+    terminal::enable_raw_mode().unwrap();
+    execute!(
+        io::stdout(),
+        event::EnableMouseCapture,
+    ).unwrap();
+
+    // Parse arguments.
     let args: Vec<String> = env::args().collect();
     if args.len() > 2 {
         panic!("Please supply only one file path to visualize.");
@@ -24,18 +32,12 @@ fn main() {
     if args.len() < 2 {
         panic!("Please supply a file path to visualize.")
     }
-
     let file_path = &args[1];
-
-    // Put stdout in raw mode with mouse events enabled.
-    let _raw_terminal = MouseTerminal::from(io::stdout().into_raw_mode().unwrap());
-
+    
     // Load model.
     let input_model = model::Model:: new_obj(
         file_path,
-        three::Point::new(
-            0., 0., 0.
-        )
+        three::Point::new(0., 0., 0.)
     ).unwrap();
     let bounds = input_model.world_bounds();
     let center = input_model.model_to_world(&three::Point::new(
@@ -61,7 +63,6 @@ fn main() {
     ).sqrt() * INITIAL_DISTANCE_MULTIPLIER;
 
     // Setup events.
-    let mut events = termion::async_stdin().events();
     let mut mouse_speed: (f32, f32) = (0., 0.);
     let mut last_mouse_position = screen::Point::new(0, 0);
 
@@ -76,33 +77,49 @@ fn main() {
 
         // Take mouse input, and extract mouse speed.
         let mut event_count = 0;
-        for event in &mut events {
-            event_count += 1;
-            match event {
-                Ok(Event::Key(Key::Ctrl('c'))) => { running = false }
-                Ok(Event::Key(Key::Char('+'))) => { distance_to_model *= 0.97}
-                Ok(Event::Key(Key::Char('-'))) => { distance_to_model *= 1.03}
-                Ok(Event::Mouse(mouse_event)) => match mouse_event {
-                    MouseEvent::Press(_, x, y) => {
-                        last_mouse_position.x = x as i32;
-                        last_mouse_position.y = y as i32;
-                        start_mouse_position = last_mouse_position;
+        while event::poll(Duration::from_secs(0)).unwrap() {
+            match event::read() {
+                Ok(event) => {
+                    match event {
+                        event::Event::Key(key_event) => {
+                            let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
+                                && key_event.code == event::KeyCode::Char('c');
+                            if is_ctrl_c {running = false}
+                            else if key_event.code == event::KeyCode::Char('+') {
+                                distance_to_model *= 0.97;
+                            } else if key_event.code == event::KeyCode::Char('-') {
+                                distance_to_model *= 1.03;
+                            }
+                        }
+                        event::Event::Mouse(mouse_event) => {
+                            let (x, y) = (mouse_event.column, mouse_event.row);
+                            match mouse_event.kind {
+                                event::MouseEventKind::Up(_) => {}
+                                event::MouseEventKind::Down(_) => {
+                                    last_mouse_position.x = x as i32;
+                                    last_mouse_position.y = y as i32;
+                                    start_mouse_position = last_mouse_position;
+                                    event_count += 1;
+                                }
+                                event::MouseEventKind::Drag(_) => {
+                                    let delta_x = x as f32 - start_mouse_position.x as f32;
+                                    let delta_y = start_mouse_position.y as f32 - y as f32;
+                                    mouse_speed.0 = delta_x / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
+                                    mouse_speed.1 = delta_y / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
+                                    last_mouse_position.x = x as i32;
+                                    last_mouse_position.y = y as i32;
+                                    event_count += 1;
+                                }
+                                _ => {}
+                            }
+                        }
+                        _ => {}
                     }
-
-                    MouseEvent::Hold(x, y) => {
-                        let delta_x = x as f32 - start_mouse_position.x as f32;
-                        let delta_y = start_mouse_position.y as f32 - y as f32;
-                        mouse_speed.0 = delta_x / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
-                        mouse_speed.1 = delta_y / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
-                        last_mouse_position.x = x as i32;
-                        last_mouse_position.y = y as i32;
-                    }
-
-                    _ => {}
                 }
                 _ => {}
             }
         }
+
         if event_count == 0 {
             mouse_speed.0 = 0.;
             mouse_speed.1 = 0.;
@@ -132,8 +149,8 @@ fn main() {
 
         // Print info.
         print!(
-            "{}x: {:6.3}, y: {:6.3}, z: {:6.3} | heading: {:6.3}, pitch: {:6.3}, roll: {:6.3} | fps: {:3.0}", 
-            termion::clear::CurrentLine,
+            "x: {:6.3}, y: {:6.3}, z: {:6.3} | heading: {:6.3}, pitch: {:6.3}, roll: {:6.3} | fps: {:3.0}", 
+            // termion::clear::CurrentLine,
             camera.coordinates.x, camera.coordinates.y, camera.coordinates.z,
             camera.yaw, camera.pitch, camera.roll,
             1. / duration_per_frame.as_secs_f32()
@@ -141,4 +158,10 @@ fn main() {
 
         duration_per_frame = start.elapsed();
     }
+
+    execute!(
+        io::stdout(),
+        event::DisableMouseCapture,
+    ).unwrap();
+    terminal::disable_raw_mode().unwrap();
 }
