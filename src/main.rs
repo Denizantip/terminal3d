@@ -1,11 +1,14 @@
 use std::*;
+use process::exit;
 use time::Duration;
 
 use crossterm::{
     event,
     execute,
     terminal,
+    style
 };
+
 mod screen;
 mod three;
 mod model;
@@ -15,6 +18,23 @@ const VIEWPORT_DISTANCE: f32 = 0.1;
 const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 60);
 const MOUSE_SPEED_MULTIPLIER: f32 = 0.4;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
+
+fn graceful_close() -> ! {
+    execute!(
+        io::stdout(),
+        event::DisableMouseCapture,
+    ).unwrap();
+    terminal::disable_raw_mode().unwrap();
+    exit(0)
+}
+
+fn error_close(msg: &dyn fmt::Display) -> ! {
+    execute!(
+        io::stdout(),
+        style::Print(msg)
+    ).unwrap();
+    graceful_close()
+}
 
 fn main() {
     // Setup raw mode, mouse capture, and event stream.
@@ -27,18 +47,24 @@ fn main() {
     // Parse arguments.
     let args: Vec<String> = env::args().collect();
     if args.len() > 2 {
-        panic!("Please supply only one file path to visualize.");
+        error_close(&"Please supply only one file path to visualize.");
     }
     if args.len() < 2 {
-        panic!("Please supply a file path to visualize.")
+        error_close(&"Please supply a file path to visualize.");
     }
     let file_path = &args[1];
     
     // Load model.
-    let input_model = model::Model:: new_obj(
+    let input_model = match model::Model::new_obj(
         file_path,
         three::Point::new(0., 0., 0.)
-    ).unwrap();
+    ) {
+        Ok(model) => model,
+        Err(error) => {
+            error_close(&error)
+        }
+    };
+
     let bounds = input_model.world_bounds();
     let center = input_model.model_to_world(&three::Point::new(
         (bounds.0.x + bounds.1.x) / 2., 
@@ -70,8 +96,7 @@ fn main() {
     let mut duration_per_frame = TARGET_DURATION_PER_FRAME;
 
     // Start main loop.
-    let mut running = true;
-    while running {
+    loop {
         let start = time::Instant::now();
         let mut start_mouse_position = last_mouse_position;
 
@@ -84,7 +109,8 @@ fn main() {
                         event::Event::Key(key_event) => {
                             let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
                                 && key_event.code == event::KeyCode::Char('c');
-                            if is_ctrl_c {running = false}
+                            if is_ctrl_c { graceful_close() }
+
                             else if key_event.code == event::KeyCode::Char('+') {
                                 distance_to_model *= 0.97;
                             } else if key_event.code == event::KeyCode::Char('-') {
@@ -148,20 +174,39 @@ fn main() {
         }
 
         // Print info.
-        print!(
-            "x: {:6.3}, y: {:6.3}, z: {:6.3} | heading: {:6.3}, pitch: {:6.3}, roll: {:6.3} | fps: {:3.0}", 
-            // termion::clear::CurrentLine,
-            camera.coordinates.x, camera.coordinates.y, camera.coordinates.z,
-            camera.yaw, camera.pitch, camera.roll,
-            1. / duration_per_frame.as_secs_f32()
+        let camera_position_msg = format!(
+            "x: {:6.3}, y: {:6.3}, z: {:6.3}", 
+            camera.coordinates.x, camera.coordinates.y, camera.coordinates.z
         );
+
+        let camera_angle_msg = format!(
+            "heading: {:6.3}, pitch: {:6.3}, roll: {:6.3}", 
+            camera.yaw, camera.pitch, camera.roll
+        );
+
+        let fps_msg = format!(
+            "fps: {:3.0}", 1. / duration_per_frame.as_secs_f32()
+        );
+
+        let msgs = (
+            format!("{} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg),
+            format!("{} | {}", camera_position_msg, camera_angle_msg),
+            format!("{}", camera_position_msg),
+        );
+
+        let final_msg = match terminal::size().unwrap().0 as usize {
+            width if width > msgs.0.len() => { msgs.0 }
+            width if width > msgs.1.len() => { msgs.1 }
+            width if width > msgs.2.len() => { msgs.2 }
+            _ => { "".to_string() }
+        };
+
+        execute!(
+            io::stdout(),
+            terminal::Clear(terminal::ClearType::CurrentLine),
+            style::Print(final_msg),
+        ).unwrap();
 
         duration_per_frame = start.elapsed();
     }
-
-    execute!(
-        io::stdout(),
-        event::DisableMouseCapture,
-    ).unwrap();
-    terminal::disable_raw_mode().unwrap();
 }
