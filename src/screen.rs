@@ -6,13 +6,22 @@ use crossterm::{
     style
 };
 
+// Setup ability to get dimensions out of matrix arrays.
+pub trait Dim {
+    const WIDTH: usize;
+    const HEIGHT: usize;
+}
+
+impl<T, const WIDTH: usize, const HEIGHT: usize> Dim for [[T; WIDTH]; HEIGHT] {
+    const WIDTH: usize = WIDTH;
+    const HEIGHT: usize = HEIGHT;
+}
+
 const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
-const BLOCK_PIXEL_DIMENSIONS: (usize, usize) = (2, 2);
-const BRAILE_PIXEL_DIMENSIONS: (usize, usize) = (2, 4);
 
 // Pixel types, represent a single char.
-type BlockPixel = [[bool; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1];
-type BrailePixel = [[bool; BRAILE_PIXEL_DIMENSIONS.0]; BRAILE_PIXEL_DIMENSIONS.1];
+type BlockPixel = [[bool; 2]; 2];
+type BrailePixel = [[bool; 2]; 4];
 
 // Handle block pixel to char conversion.
 fn block_pixel_to_char(pixel: &BlockPixel) -> char {
@@ -102,8 +111,8 @@ impl Screen {
         };
 
         self.resize(
-            terminal_width * BRAILE_PIXEL_DIMENSIONS.0 as u16, 
-            (terminal_height - 1) * BRAILE_PIXEL_DIMENSIONS.1 as u16
+            terminal_width * BrailePixel::WIDTH as u16, 
+            (terminal_height - 1) * BrailePixel::HEIGHT as u16
         );
     }
 
@@ -115,8 +124,8 @@ impl Screen {
         };
 
         self.resize(
-            terminal_width * BLOCK_PIXEL_DIMENSIONS.0 as u16, 
-            (terminal_height - 1) * BLOCK_PIXEL_DIMENSIONS.1 as u16
+            terminal_width *  BlockPixel::WIDTH as u16, 
+            (terminal_height - 1) *  BlockPixel::HEIGHT as u16
         );
     }
 
@@ -201,15 +210,15 @@ impl Screen {
         ).unwrap();
 
         // Chunk rows by the height of a single pixel.
-        let chunked_rows = self.content.chunks(BLOCK_PIXEL_DIMENSIONS.1);
+        let chunked_rows = self.content.chunks(BlockPixel::HEIGHT);
 
         // Run through chunks.
         for subrows in chunked_rows {
 
             // Produce a "real row" - a row of Pixel types.
-            let real_row_width = self.width.div_ceil(BLOCK_PIXEL_DIMENSIONS.0 as u16) as usize;
+            let real_row_width = self.width.div_ceil(BlockPixel::WIDTH as u16) as usize;
             let mut real_row = vec![[
-                [false; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1
+                [false; BlockPixel::WIDTH]; BlockPixel::HEIGHT
             ]; real_row_width];
 
             // Run through every subrow, where subpixel_y is the y index within the pixel.
@@ -244,15 +253,15 @@ impl Screen {
         ).unwrap();
 
         // Chunk rows by the height of a single pixel.
-        let chunked_rows = self.content.chunks(BRAILE_PIXEL_DIMENSIONS.1);
+        let chunked_rows = self.content.chunks(BrailePixel::HEIGHT);
 
         // Run through chunks.
         for subrows in chunked_rows {
 
             // Produce a "real row" - a row of Pixel types.
-            let real_row_width = self.width.div_ceil(BRAILE_PIXEL_DIMENSIONS.0 as u16) as usize;
+            let real_row_width = self.width.div_ceil(BrailePixel::WIDTH as u16) as usize;
             let mut real_row = vec![[
-                [false; BRAILE_PIXEL_DIMENSIONS.0]; BRAILE_PIXEL_DIMENSIONS.1
+                [false; BrailePixel::WIDTH]; BrailePixel::HEIGHT
             ]; real_row_width];
 
             // Run through every subrow, where subpixel_y is the y index within the pixel.
