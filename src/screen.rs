@@ -5,6 +5,8 @@ use crossterm::{
     cursor
 };
 
+const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
+
 // Pixel type, represents a chunk of 4 cells, 
 // to be converted to a single char on the screen.
 // Order is top-left, top-right, bottom-left, bottom-right.
@@ -51,17 +53,15 @@ pub struct Screen {
     pub width: u16,
     pub height: u16,
     content: Vec<Vec<bool>>,
-    stdout: io::Stdout
 }
 
 impl Screen {
     // Create a new screen, sized to the terminal.
     pub fn new() -> Screen {
-        let mut stdout = io::stdout();
 
         // Clear term and go to 0, 0.
         execute!(
-            stdout,
+            io::stdout(),
             cursor::MoveTo(0, 0),
             terminal::Clear(terminal::ClearType::All)
         ).unwrap();
@@ -70,8 +70,7 @@ impl Screen {
         let mut res = Screen{
             content: Vec::new(),
             width: 0,
-            height: 0,
-            stdout
+            height: 0
         };
 
         // Fit to terminal and return.
@@ -81,18 +80,19 @@ impl Screen {
 
     // Resize screen to fit terminal width and height.
     pub fn fit_to_terminal(&mut self) {
-        let (
-            terminal_width, 
-            terminal_height
-        ) = terminal::size().unwrap();
+        let (terminal_width, terminal_height) = match terminal::size() {
+            Ok(dim) => dim,
+            Err(_) => DEFAULT_TERMINAL_DIMENSIONS
+        };
+
         self.resize(terminal_width * 2, (terminal_height - 1) * 2);
     }
 
     // Write a value to a coord on the screen.
     // If out of bounds, will simply not write.
     pub fn write(&mut self, val: bool, point: &Point) {
-        let x_in_bounds = 0 < point.x && (point.x as u16) < self.width;
-        let y_in_bounds = 0 < point.y && (point.y as u16) < self.height;
+        let x_in_bounds = 0 < point.x && point.x < self.width as i32;
+        let y_in_bounds = 0 < point.y && point.y < self.height as i32;
         if x_in_bounds && y_in_bounds {
             self.content[point.y as usize][point.x as usize] = val;
         }
@@ -107,7 +107,6 @@ impl Screen {
     // Either crops the image if the requested size is smaller,
     // or extends the image with empty cells if the request is larger.
     pub fn resize(&mut self, width: u16, height: u16) {
-
         // Handle height.
         if height > self.height {
             self.content.extend(vec![
@@ -163,9 +162,9 @@ impl Screen {
     }
 
     // Render the screen.
-    pub fn render(&mut self) {
+    pub fn render(&self) {
         execute!(
-            self.stdout,
+            io::stdout(),
             cursor::MoveTo(0, 0)
         ).unwrap();
 

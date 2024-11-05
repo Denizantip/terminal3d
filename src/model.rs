@@ -1,6 +1,7 @@
 use crate::three;
 use std::*;
 
+// Error for .obj parsing failures.
 #[derive(Debug)]
 struct ObjParseError;
 
@@ -30,9 +31,9 @@ pub struct Model {
     pub position: three::Point
 }
 
+#[allow(dead_code)]
 impl Model {
     // Creates a new model at a specified position.
-    #[allow(dead_code)]
     pub fn new(
         points: Vec<three::Point>,
         edges: Vec<(three::Point, three::Point)>,
@@ -46,7 +47,6 @@ impl Model {
     }
 
     // Creates a new cube, centered at the specified position, with the specified side-length.
-    #[allow(dead_code)]
     pub fn new_cube(
         side_length: f32,
         position: three::Point

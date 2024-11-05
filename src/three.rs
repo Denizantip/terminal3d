@@ -36,6 +36,7 @@ pub struct Camera {
     pub screen: screen::Screen
 }
 
+#[allow(dead_code)]
 impl Camera {
     // Create a new camera.
     pub fn new(
@@ -99,7 +100,6 @@ impl Camera {
     }
 
     // Plot points of a given model.
-    #[allow(dead_code)]
     pub fn plot_model_points(&mut self, model: &model::Model) {
         for point in model.points.iter() {
             self.write(true, &model.model_to_world(point));
@@ -107,7 +107,6 @@ impl Camera {
     }
 
     // Plot edges of a given model.
-    #[allow(dead_code)]
     pub fn plot_model_edges(&mut self, model: &model::Model) {
         for edge in model.edges.iter() {
             self.edge( 

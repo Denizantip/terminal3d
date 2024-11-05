@@ -14,12 +14,15 @@ mod screen;
 mod three;
 mod model;
 
+// Config.
 const VIEWPORT_FOV: f32 = 1.7;
 const VIEWPORT_DISTANCE: f32 = 0.1;
-const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 60);
+const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 1000);
 const MOUSE_SPEED_MULTIPLIER: f32 = 30.;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
+const SCROLL_MULTIPLER: f32 = 0.03;
 
+// Disables raw mode and mouse capture, and shows the cursor.
 fn graceful_close() -> ! {
     execute!(
         io::stdout(),
@@ -30,6 +33,7 @@ fn graceful_close() -> ! {
     exit(0)
 }
 
+// Closes with the provided error message.
 fn error_close(msg: &dyn fmt::Display) -> ! {
     execute!(
         io::stdout(),
@@ -39,7 +43,6 @@ fn error_close(msg: &dyn fmt::Display) -> ! {
 }
 
 fn main() {
-    // Setup raw mode, mouse capture, and event stream.
     terminal::enable_raw_mode().unwrap();
     execute!(
         io::stdout(),
@@ -49,12 +52,8 @@ fn main() {
 
     // Parse arguments.
     let args: Vec<String> = env::args().collect();
-    if args.len() > 2 {
-        error_close(&"Please supply only one file path to visualize.");
-    }
-    if args.len() < 2 {
-        error_close(&"Please supply a file path to visualize.");
-    }
+    if args.len() > 2 { error_close(&"Please supply only one file path to visualize.") }
+    if args.len() < 2 { error_close(&"Please supply a file path to visualize.") }
     let file_path = &args[1];
     
     // Load model.
@@ -63,9 +62,7 @@ fn main() {
         three::Point::new(0., 0., 0.)
     ) {
         Ok(model) => model,
-        Err(error) => {
-            error_close(&error)
-        }
+        Err(error) => error_close(&error)
     };
 
     // Get dimensions.
@@ -102,26 +99,32 @@ fn main() {
         let start = time::Instant::now();
         let mut start_mouse_position = last_mouse_position;
 
-        // Take mouse input, and extract mouse speed.
+        // Look through the queue while there is an available event.
         let mut event_count = 0;
         while event::poll(Duration::from_secs(0)).unwrap() {
             if let Ok(event) = event::read() {
                 match event {
+
+                    // Handle ctrl+c explictly (raw mode disables capture).
                     event::Event::Key(key_event) => {
                         let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
                             && key_event.code == event::KeyCode::Char('c');
                         if is_ctrl_c { graceful_close() }
                     }
+
+                    // Mouse controls.
                     event::Event::Mouse(mouse_event) => {
                         let (x, y) = (mouse_event.column, mouse_event.row);
                         match mouse_event.kind {
-                            event::MouseEventKind::Up(_) => {}
+                            // If the mouse has been pressed, record this position.
                             event::MouseEventKind::Down(_) => {
                                 last_mouse_position.x = x as i32;
                                 last_mouse_position.y = y as i32;
                                 start_mouse_position = last_mouse_position;
                                 event_count += 1;
                             }
+
+                            // If the mouse is dragged, update drag speeds.
                             event::MouseEventKind::Drag(_) => {
                                 let delta_x = x as f32 - start_mouse_position.x as f32;
                                 let delta_y = start_mouse_position.y as f32 - y as f32;
@@ -131,11 +134,15 @@ fn main() {
                                 last_mouse_position.y = y as i32;
                                 event_count += 1;
                             }
+
+                            // Zoom out.
                             event::MouseEventKind::ScrollDown => {
-                                distance_to_model += diagonal * 0.03;
+                                distance_to_model += diagonal * SCROLL_MULTIPLER;
                             }
+
+                            // Zoom in.
                             event::MouseEventKind::ScrollUp => {
-                                distance_to_model -= diagonal * 0.03;
+                                distance_to_model -= diagonal * SCROLL_MULTIPLER;
                                 distance_to_model = distance_to_model.max(0.);
                             }
                             _ => {}
@@ -145,10 +152,9 @@ fn main() {
                 }
             }
         }
-        if event_count == 0 {
-            mouse_speed.0 = 0.;
-            mouse_speed.1 = 0.;
-        }
+
+        // If no event happened, reset the mouse speed.
+        if event_count == 0 { mouse_speed = (0., 0.) }
 
         // Update viewer params.
         view_yaw -= mouse_speed.0;
@@ -172,7 +178,7 @@ fn main() {
             thread::sleep(time);
         }
 
-        // Print info.
+        // Create info message variants for responsive resizing.
         let camera_position_msg = format!(
             "x: {:6.3}, y: {:6.3}, z: {:6.3}", 
             camera.coordinates.x, camera.coordinates.y, camera.coordinates.z
