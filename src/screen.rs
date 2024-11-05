@@ -8,13 +8,14 @@ use crossterm::{
 
 const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
 const BLOCK_PIXEL_DIMENSIONS: (usize, usize) = (2, 2);
+const BRAILE_PIXEL_DIMENSIONS: (usize, usize) = (2, 4);
 
-// Pixel type, represents a chunk of 4 cells, 
-// to be converted to a single char on the screen.
-type Pixel = [[bool; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1];
+// Pixel types, represent a single char.
+type BlockPixel = [[bool; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1];
+type BrailePixel = [[bool; BRAILE_PIXEL_DIMENSIONS.0]; BRAILE_PIXEL_DIMENSIONS.1];
 
 // Handle pixel to char conversion.
-fn pixel_to_char(pixel: &Pixel) -> char {
+fn block_pixel_to_char(pixel: &BlockPixel) -> char {
     match pixel {
         [[false, false], [false, false]] => ' ',
         [[true, false], [false, false]] => '▘',
@@ -33,6 +34,22 @@ fn pixel_to_char(pixel: &Pixel) -> char {
         [[false, true], [true, true]] => '▟',
         [[true, true], [true, true]] => '█'
     }
+}
+
+fn braile_pixel_to_char(pixel: &BrailePixel) -> char {
+    let mut unicode: u32 = 0;
+    if pixel[0][0] { unicode |= 1 << 0 }
+    if pixel[1][0] { unicode |= 1 << 1 }
+    if pixel[2][0] { unicode |= 1 << 2 }
+    if pixel[0][1] { unicode |= 1 << 3 }
+    if pixel[1][1] { unicode |= 1 << 4 }
+    if pixel[2][1] { unicode |= 1 << 5 }
+    if pixel[3][0] { unicode |= 1 << 6 }
+    if pixel[3][1] { unicode |= 1 << 7 }
+
+    unicode |= 0x28 << 8;
+
+    char::from_u32(unicode).unwrap()
 }
 
 // Simple 2d point wrapper.
@@ -67,25 +84,37 @@ impl Screen {
         ).unwrap();
 
         // Create screen.
-        let mut res = Screen{
+        Screen{
             content: Vec::new(),
             width: 0,
             height: 0
-        };
-
-        // Fit to terminal and return.
-        res.fit_to_terminal();
-        res
+        }
     }
 
-    // Resize screen to fit terminal width and height.
-    pub fn fit_to_terminal(&mut self) {
+    // Resize braile screen to fit terminal width and height.
+    pub fn fit_braile_to_terminal(&mut self) {
         let (terminal_width, terminal_height) = match terminal::size() {
             Ok(dim) => dim,
             Err(_) => DEFAULT_TERMINAL_DIMENSIONS
         };
 
-        self.resize(terminal_width * 2, (terminal_height - 1) * 2);
+        self.resize(
+            terminal_width * BRAILE_PIXEL_DIMENSIONS.0 as u16, 
+            (terminal_height - 1) * BRAILE_PIXEL_DIMENSIONS.1 as u16
+        );
+    }
+
+    // Resize block screen to fit terminal width and height.
+    pub fn fit_block_to_terminal(&mut self) {
+        let (terminal_width, terminal_height) = match terminal::size() {
+            Ok(dim) => dim,
+            Err(_) => DEFAULT_TERMINAL_DIMENSIONS
+        };
+
+        self.resize(
+            terminal_width * BLOCK_PIXEL_DIMENSIONS.0 as u16, 
+            (terminal_height - 1) * BLOCK_PIXEL_DIMENSIONS.1 as u16
+        );
     }
 
     // Write a value to a coord on the screen.
@@ -161,8 +190,8 @@ impl Screen {
         }
     }
 
-    // Render the screen.
-    pub fn render(&self) {
+    // Render the screen in blocks.
+    pub fn render_block(&self) {
         execute!(
             io::stdout(),
             cursor::MoveTo(0, 0)
@@ -198,7 +227,50 @@ impl Screen {
 
             // Render.
             for pixel in real_row {
-                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
+                execute!(io::stdout(), style::Print(block_pixel_to_char(&pixel))).unwrap();
+            }
+            execute!(io::stdout(), style::Print("\r\n")).unwrap();
+        }
+    }
+
+    // Render the screen in braile.
+    pub fn render_braile(&self) {
+        execute!(
+            io::stdout(),
+            cursor::MoveTo(0, 0)
+        ).unwrap();
+
+        // Chunk rows by the height of a single pixel.
+        let chunked_rows = self.content.chunks(BRAILE_PIXEL_DIMENSIONS.1);
+
+        // Run through chunks.
+        for subrows in chunked_rows {
+
+            // Produce a "real row" - a row of Pixel types.
+            let real_row_width = self.width.div_ceil(BRAILE_PIXEL_DIMENSIONS.0 as u16) as usize;
+            let mut real_row = vec![[
+                [false; BRAILE_PIXEL_DIMENSIONS.0]; BRAILE_PIXEL_DIMENSIONS.1
+            ]; real_row_width];
+
+            // Run through every subrow, where subpixel_y is the y index within the pixel.
+            for (subpixel_y, subrow) in subrows.iter().enumerate() {
+
+                // Chunk the subrow by the width of the pixel.
+                let chunked_subrow = subrow.chunks_exact(2);
+                let remainder = chunked_subrow.remainder();
+
+                // Update real row.
+                for (real_x, pixel_row) in chunked_subrow.enumerate() {
+                    real_row[real_x][subpixel_y][..pixel_row.len()].copy_from_slice(pixel_row);
+                }
+                
+                // Handle remainder (indivisible width).
+                real_row[real_row_width - 1][subpixel_y][..remainder.len()].copy_from_slice(remainder);
+            }
+
+            // Render.
+            for pixel in real_row {
+                execute!(io::stdout(), style::Print(braile_pixel_to_char(&pixel))).unwrap();
             }
             execute!(io::stdout(), style::Print("\r\n")).unwrap();
         }

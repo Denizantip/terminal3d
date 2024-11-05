@@ -90,8 +90,9 @@ fn main() {
     let mut view_pitch: f32 = 0.0;
     let mut distance_to_model = diagonal * INITIAL_DISTANCE_MULTIPLIER;
 
-    // Render points or edges.
+    // Render modes.
     let mut points_mode = false;
+    let mut braile_mode = false;
 
     // Setup events.
     let mut mouse_speed: (f32, f32) = (0., 0.);
@@ -114,8 +115,9 @@ fn main() {
                             && key_event.code == event::KeyCode::Char('c');
                         if is_ctrl_c { graceful_close() }
                         
-                        // Toggle points mode.
+                        // Toggle modes.
                         if key_event.code == event::KeyCode::Char('p') { points_mode = !points_mode }
+                        if key_event.code == event::KeyCode::Char('b') { braile_mode = !braile_mode }
                     }
 
                     // Mouse controls.
@@ -174,11 +176,16 @@ fn main() {
         camera.pitch = -view_pitch;
 
         // Render.
-        camera.screen.fit_to_terminal();
+        if braile_mode { camera.screen.fit_braile_to_terminal() }
+        else { camera.screen.fit_block_to_terminal() }
+
         camera.screen.clear();
+
         if points_mode { camera.plot_model_points(&input_model) }
         else { camera.plot_model_edges(&input_model) }
-        camera.screen.render();
+
+        if braile_mode { camera.screen.render_braile() }
+        else { camera.screen.render_block() }
         
         // Add buffer time to hit 60 fps.
         if let Some(time) = TARGET_DURATION_PER_FRAME.checked_sub(start.elapsed()) { 
