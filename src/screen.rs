@@ -2,7 +2,8 @@ use std::io;
 use crossterm::{
     execute, 
     terminal,
-    cursor
+    cursor,
+    style
 };
 
 const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
@@ -181,7 +182,7 @@ impl Screen {
                     rows.0[real_x as usize * 2], rows.0[real_x as usize * 2 + 1],
                     rows.1[real_x as usize * 2], rows.1[real_x as usize * 2 + 1]
                 );
-                print!("{}", pixel_to_char(&pixel));
+                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
 
             // Handle case of odd width by adding another char.
@@ -190,10 +191,10 @@ impl Screen {
                     rows.0[self.width as usize - 1], false,
                     rows.1[self.width as usize - 1], false
                 );
-                print!("{}", pixel_to_char(&pixel));
+                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
 
-            print!("\r\n");
+            execute!(io::stdout(), style::Print("\r\n")).unwrap();
         }
 
         // Handle case of odd height by adding another char to every column.
@@ -205,7 +206,7 @@ impl Screen {
                     last_row[real_x as usize * 2], last_row[real_x as usize * 2 + 1],
                     false, false
                 );
-                print!("{}", pixel_to_char(&pixel));
+                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
 
             // Handle odd width.
@@ -214,10 +215,10 @@ impl Screen {
                     last_row[self.width as usize - 1], false,
                     false, false
                 );
-                print!("{}", pixel_to_char(&pixel));
+                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
-
-            print!("\r\n");
+            
+            execute!(io::stdout(), style::Print("\r\n")).unwrap();
         }
     }
 }
