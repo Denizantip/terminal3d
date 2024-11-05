@@ -7,10 +7,11 @@ use crossterm::{
 };
 
 const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
+const BLOCK_PIXEL_DIMENSIONS: (usize, usize) = (2, 2);
 
 // Pixel type, represents a chunk of 4 cells, 
 // to be converted to a single char on the screen.
-type Pixel = [[bool; 2]; 2];
+type Pixel = [[bool; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1];
 
 // Handle pixel to char conversion.
 fn pixel_to_char(pixel: &Pixel) -> char {
@@ -58,7 +59,6 @@ pub struct Screen {
 impl Screen {
     // Create a new screen, sized to the terminal.
     pub fn new() -> Screen {
-
         // Clear term and go to 0, 0.
         execute!(
             io::stdout(),
@@ -168,55 +168,38 @@ impl Screen {
             cursor::MoveTo(0, 0)
         ).unwrap();
 
-        for real_y in 0..(self.height / 2) {
-            // Extract the relavent rows in the content matrix.
-            let rows = (
-                &self.content[real_y as usize * 2],
-                &self.content[real_y as usize * 2 + 1]
-            );
+        // Chunk rows by the height of a single pixel.
+        let chunked_rows = self.content.chunks(BLOCK_PIXEL_DIMENSIONS.1);
 
-            for real_x in 0..(self.width / 2) {
-                // Extract the relavent pixel in the content matrix, and print it out.
-                let pixel: Pixel = [
-                    [rows.0[real_x as usize * 2], rows.0[real_x as usize * 2 + 1]],
-                    [rows.1[real_x as usize * 2], rows.1[real_x as usize * 2 + 1]]
-                ];
-                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
+        // Run through chunks.
+        for subrows in chunked_rows {
+
+            // Produce a "real row" - a row of Pixel types.
+            let real_row_width = self.width.div_ceil(BLOCK_PIXEL_DIMENSIONS.0 as u16) as usize;
+            let mut real_row = vec![[
+                [false; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1
+            ]; real_row_width];
+
+            // Run through every subrow, where subpixel_y is the y index within the pixel.
+            for (subpixel_y, subrow) in subrows.iter().enumerate() {
+
+                // Chunk the subrow by the width of the pixel.
+                let chunked_subrow = subrow.chunks_exact(2);
+                let remainder = chunked_subrow.remainder();
+
+                // Update real row.
+                for (real_x, pixel_row) in chunked_subrow.enumerate() {
+                    real_row[real_x][subpixel_y][..pixel_row.len()].copy_from_slice(pixel_row);
+                }
+                
+                // Handle remainder (indivisible width).
+                real_row[real_row_width - 1][subpixel_y][..remainder.len()].copy_from_slice(remainder);
             }
 
-            // Handle case of odd width by adding another char.
-            if self.width % 2 == 1 {
-                let pixel: Pixel = [
-                    [rows.0[self.width as usize - 1], false],
-                    [rows.1[self.width as usize - 1], false]
-                ];
+            // Render.
+            for pixel in real_row {
                 execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
-
-            execute!(io::stdout(), style::Print("\r\n")).unwrap();
-        }
-
-        // Handle case of odd height by adding another char to every column.
-        if self.height % 2 == 1 {
-            let last_row = &self.content[self.height as usize - 1];
-            for real_x in 0..(self.width / 2) {
-                // Extract the relavent pixel in the content matrix, and print it out.
-                let pixel: Pixel = [
-                    [last_row[real_x as usize * 2], last_row[real_x as usize * 2 + 1]],
-                    [false, false]
-                ];
-                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
-            }
-
-            // Handle odd width.
-            if self.width % 2 == 1 {
-                let pixel: Pixel = [
-                    [last_row[self.width as usize - 1], false],
-                    [false, false]
-                ];
-                execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
-            }
-            
             execute!(io::stdout(), style::Print("\r\n")).unwrap();
         }
     }
