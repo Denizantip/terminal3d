@@ -10,28 +10,27 @@ const DEFAULT_TERMINAL_DIMENSIONS: (u16, u16) = (80, 24);
 
 // Pixel type, represents a chunk of 4 cells, 
 // to be converted to a single char on the screen.
-// Order is top-left, top-right, bottom-left, bottom-right.
-type Pixel = (bool, bool, bool, bool);
+type Pixel = [[bool; 2]; 2];
 
 // Handle pixel to char conversion.
 fn pixel_to_char(pixel: &Pixel) -> char {
     match pixel {
-        (false, false, false, false) => ' ',
-        (true, false, false, false) => '▘',
-        (false, true, false, false) => '▝',
-        (true, true, false, false) => '▀',
-        (false, false, true, false) => '▖',
-        (true, false, true, false) => '▌',
-        (false, true, true, false) => '▞',
-        (true, true, true, false) => '▛',
-        (false, false, false, true) => '▗',
-        (true, false, false, true) => '▚',
-        (false, true, false, true) => '▐',
-        (true, true, false, true) => '▜',
-        (false, false, true, true) => '▄',
-        (true, false, true, true) => '▙',
-        (false, true, true, true) => '▟',
-        (true, true, true, true) => '█'
+        [[false, false], [false, false]] => ' ',
+        [[true, false], [false, false]] => '▘',
+        [[false, true], [false, false]] => '▝',
+        [[true, true], [false, false]] => '▀',
+        [[false, false], [true, false]] => '▖',
+        [[true, false], [true, false]] => '▌',
+        [[false, true], [true, false]] => '▞',
+        [[true, true], [true, false]] => '▛',
+        [[false, false], [false, true]] => '▗',
+        [[true, false], [false, true]] => '▚',
+        [[false, true], [false, true]] => '▐',
+        [[true, true], [false, true]] => '▜',
+        [[false, false], [true, true]] => '▄',
+        [[true, false], [true, true]] => '▙',
+        [[false, true], [true, true]] => '▟',
+        [[true, true], [true, true]] => '█'
     }
 }
 
@@ -178,19 +177,19 @@ impl Screen {
 
             for real_x in 0..(self.width / 2) {
                 // Extract the relavent pixel in the content matrix, and print it out.
-                let pixel: Pixel = (
-                    rows.0[real_x as usize * 2], rows.0[real_x as usize * 2 + 1],
-                    rows.1[real_x as usize * 2], rows.1[real_x as usize * 2 + 1]
-                );
+                let pixel: Pixel = [
+                    [rows.0[real_x as usize * 2], rows.0[real_x as usize * 2 + 1]],
+                    [rows.1[real_x as usize * 2], rows.1[real_x as usize * 2 + 1]]
+                ];
                 execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
 
             // Handle case of odd width by adding another char.
             if self.width % 2 == 1 {
-                let pixel: Pixel = (
-                    rows.0[self.width as usize - 1], false,
-                    rows.1[self.width as usize - 1], false
-                );
+                let pixel: Pixel = [
+                    [rows.0[self.width as usize - 1], false],
+                    [rows.1[self.width as usize - 1], false]
+                ];
                 execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
 
@@ -202,19 +201,19 @@ impl Screen {
             let last_row = &self.content[self.height as usize - 1];
             for real_x in 0..(self.width / 2) {
                 // Extract the relavent pixel in the content matrix, and print it out.
-                let pixel: Pixel = (
-                    last_row[real_x as usize * 2], last_row[real_x as usize * 2 + 1],
-                    false, false
-                );
+                let pixel: Pixel = [
+                    [last_row[real_x as usize * 2], last_row[real_x as usize * 2 + 1]],
+                    [false, false]
+                ];
                 execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
 
             // Handle odd width.
             if self.width % 2 == 1 {
-                let pixel: Pixel = (
-                    last_row[self.width as usize - 1], false,
-                    false, false
-                );
+                let pixel: Pixel = [
+                    [last_row[self.width as usize - 1], false],
+                    [false, false]
+                ];
                 execute!(io::stdout(), style::Print(pixel_to_char(&pixel))).unwrap();
             }
             
