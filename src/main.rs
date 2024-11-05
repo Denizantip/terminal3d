@@ -6,7 +6,8 @@ use crossterm::{
     event,
     execute,
     terminal,
-    style
+    style,
+    cursor
 };
 
 mod screen;
@@ -16,12 +17,13 @@ mod model;
 const VIEWPORT_FOV: f32 = 1.7;
 const VIEWPORT_DISTANCE: f32 = 0.1;
 const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 60);
-const MOUSE_SPEED_MULTIPLIER: f32 = 0.4;
+const MOUSE_SPEED_MULTIPLIER: f32 = 30.;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 
 fn graceful_close() -> ! {
     execute!(
         io::stdout(),
+        cursor::Show,
         event::DisableMouseCapture,
     ).unwrap();
     terminal::disable_raw_mode().unwrap();
@@ -41,6 +43,7 @@ fn main() {
     terminal::enable_raw_mode().unwrap();
     execute!(
         io::stdout(),
+        cursor::Hide,
         event::EnableMouseCapture,
     ).unwrap();
 
@@ -65,12 +68,18 @@ fn main() {
         }
     };
 
+    // Get dimensions.
     let bounds = input_model.world_bounds();
     let center = input_model.model_to_world(&three::Point::new(
         (bounds.0.x + bounds.1.x) / 2., 
         (bounds.0.y + bounds.1.y) / 2., 
         (bounds.0.z + bounds.1.z) / 2., 
     ));
+    let diagonal = (
+        (bounds.0.x - bounds.1.x).powi(2) +
+        (bounds.0.y - bounds.1.y).powi(2) +
+        (bounds.0.z - bounds.1.z).powi(2)
+    ).sqrt();
 
     // Setup camera.
     let mut camera = three::Camera::new(
@@ -82,18 +91,11 @@ fn main() {
     // Setup viewer params (relative to model).
     let mut view_yaw: f32 = 0.0;
     let mut view_pitch: f32 = 0.0;
-    let mut distance_to_model = (
-        (bounds.0.x - bounds.1.x).powi(2) +
-        (bounds.0.y - bounds.1.y).powi(2) +
-        (bounds.0.z - bounds.1.z).powi(2)
-    ).sqrt() * INITIAL_DISTANCE_MULTIPLIER;
+    let mut distance_to_model = diagonal * INITIAL_DISTANCE_MULTIPLIER;
 
     // Setup events.
     let mut mouse_speed: (f32, f32) = (0., 0.);
     let mut last_mouse_position = screen::Point::new(0, 0);
-
-    // The actual, non-target time of each frame
-    let mut duration_per_frame = TARGET_DURATION_PER_FRAME;
 
     // Start main loop.
     loop {
@@ -110,12 +112,6 @@ fn main() {
                             let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
                                 && key_event.code == event::KeyCode::Char('c');
                             if is_ctrl_c { graceful_close() }
-
-                            else if key_event.code == event::KeyCode::Char('+') {
-                                distance_to_model *= 0.97;
-                            } else if key_event.code == event::KeyCode::Char('-') {
-                                distance_to_model *= 1.03;
-                            }
                         }
                         event::Event::Mouse(mouse_event) => {
                             let (x, y) = (mouse_event.column, mouse_event.row);
@@ -130,11 +126,18 @@ fn main() {
                                 event::MouseEventKind::Drag(_) => {
                                     let delta_x = x as f32 - start_mouse_position.x as f32;
                                     let delta_y = start_mouse_position.y as f32 - y as f32;
-                                    mouse_speed.0 = delta_x / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
-                                    mouse_speed.1 = delta_y / camera.screen.width as f32 / duration_per_frame.as_secs_f32() * MOUSE_SPEED_MULTIPLIER;
+                                    mouse_speed.0 = delta_x / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
+                                    mouse_speed.1 = delta_y / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
                                     last_mouse_position.x = x as i32;
                                     last_mouse_position.y = y as i32;
                                     event_count += 1;
+                                }
+                                event::MouseEventKind::ScrollDown => {
+                                    distance_to_model += diagonal * 0.03;
+                                }
+                                event::MouseEventKind::ScrollUp => {
+                                    distance_to_model -= diagonal * 0.03;
+                                    distance_to_model = distance_to_model.max(0.);
                                 }
                                 _ => {}
                             }
@@ -145,7 +148,6 @@ fn main() {
                 _ => {}
             }
         }
-
         if event_count == 0 {
             mouse_speed.0 = 0.;
             mouse_speed.1 = 0.;
@@ -185,7 +187,7 @@ fn main() {
         );
 
         let fps_msg = format!(
-            "fps: {:3.0}", 1. / duration_per_frame.as_secs_f32()
+            "fps: {:3.0}", 1. / start.elapsed().as_secs_f32()
         );
 
         let msgs = (
@@ -206,7 +208,5 @@ fn main() {
             terminal::Clear(terminal::ClearType::CurrentLine),
             style::Print(final_msg),
         ).unwrap();
-
-        duration_per_frame = start.elapsed();
     }
 }
