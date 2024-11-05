@@ -14,7 +14,7 @@ const BRAILE_PIXEL_DIMENSIONS: (usize, usize) = (2, 4);
 type BlockPixel = [[bool; BLOCK_PIXEL_DIMENSIONS.0]; BLOCK_PIXEL_DIMENSIONS.1];
 type BrailePixel = [[bool; BRAILE_PIXEL_DIMENSIONS.0]; BRAILE_PIXEL_DIMENSIONS.1];
 
-// Handle pixel to char conversion.
+// Handle block pixel to char conversion.
 fn block_pixel_to_char(pixel: &BlockPixel) -> char {
     match pixel {
         [[false, false], [false, false]] => ' ',
@@ -36,14 +36,17 @@ fn block_pixel_to_char(pixel: &BlockPixel) -> char {
     }
 }
 
+// Handle braile pixel to char conversion.
 fn braile_pixel_to_char(pixel: &BrailePixel) -> char {
     let mut unicode: u32 = 0;
     if pixel[0][0] { unicode |= 1 << 0 }
     if pixel[1][0] { unicode |= 1 << 1 }
     if pixel[2][0] { unicode |= 1 << 2 }
+
     if pixel[0][1] { unicode |= 1 << 3 }
     if pixel[1][1] { unicode |= 1 << 4 }
     if pixel[2][1] { unicode |= 1 << 5 }
+
     if pixel[3][0] { unicode |= 1 << 6 }
     if pixel[3][1] { unicode |= 1 << 7 }
 
