@@ -105,47 +105,44 @@ fn main() {
         // Take mouse input, and extract mouse speed.
         let mut event_count = 0;
         while event::poll(Duration::from_secs(0)).unwrap() {
-            match event::read() {
-                Ok(event) => {
-                    match event {
-                        event::Event::Key(key_event) => {
-                            let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
-                                && key_event.code == event::KeyCode::Char('c');
-                            if is_ctrl_c { graceful_close() }
-                        }
-                        event::Event::Mouse(mouse_event) => {
-                            let (x, y) = (mouse_event.column, mouse_event.row);
-                            match mouse_event.kind {
-                                event::MouseEventKind::Up(_) => {}
-                                event::MouseEventKind::Down(_) => {
-                                    last_mouse_position.x = x as i32;
-                                    last_mouse_position.y = y as i32;
-                                    start_mouse_position = last_mouse_position;
-                                    event_count += 1;
-                                }
-                                event::MouseEventKind::Drag(_) => {
-                                    let delta_x = x as f32 - start_mouse_position.x as f32;
-                                    let delta_y = start_mouse_position.y as f32 - y as f32;
-                                    mouse_speed.0 = delta_x / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
-                                    mouse_speed.1 = delta_y / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
-                                    last_mouse_position.x = x as i32;
-                                    last_mouse_position.y = y as i32;
-                                    event_count += 1;
-                                }
-                                event::MouseEventKind::ScrollDown => {
-                                    distance_to_model += diagonal * 0.03;
-                                }
-                                event::MouseEventKind::ScrollUp => {
-                                    distance_to_model -= diagonal * 0.03;
-                                    distance_to_model = distance_to_model.max(0.);
-                                }
-                                _ => {}
-                            }
-                        }
-                        _ => {}
+            if let Ok(event) = event::read() {
+                match event {
+                    event::Event::Key(key_event) => {
+                        let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
+                            && key_event.code == event::KeyCode::Char('c');
+                        if is_ctrl_c { graceful_close() }
                     }
+                    event::Event::Mouse(mouse_event) => {
+                        let (x, y) = (mouse_event.column, mouse_event.row);
+                        match mouse_event.kind {
+                            event::MouseEventKind::Up(_) => {}
+                            event::MouseEventKind::Down(_) => {
+                                last_mouse_position.x = x as i32;
+                                last_mouse_position.y = y as i32;
+                                start_mouse_position = last_mouse_position;
+                                event_count += 1;
+                            }
+                            event::MouseEventKind::Drag(_) => {
+                                let delta_x = x as f32 - start_mouse_position.x as f32;
+                                let delta_y = start_mouse_position.y as f32 - y as f32;
+                                mouse_speed.0 = delta_x / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
+                                mouse_speed.1 = delta_y / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
+                                last_mouse_position.x = x as i32;
+                                last_mouse_position.y = y as i32;
+                                event_count += 1;
+                            }
+                            event::MouseEventKind::ScrollDown => {
+                                distance_to_model += diagonal * 0.03;
+                            }
+                            event::MouseEventKind::ScrollUp => {
+                                distance_to_model -= diagonal * 0.03;
+                                distance_to_model = distance_to_model.max(0.);
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
                 }
-                _ => {}
             }
         }
         if event_count == 0 {
@@ -193,7 +190,7 @@ fn main() {
         let msgs = (
             format!("{} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg),
             format!("{} | {}", camera_position_msg, camera_angle_msg),
-            format!("{}", camera_position_msg),
+            camera_position_msg.to_string(),
         );
 
         let final_msg = match terminal::size().unwrap().0 as usize {

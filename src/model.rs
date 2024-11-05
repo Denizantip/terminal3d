@@ -237,7 +237,7 @@ impl Model {
 
     // Returns the min and max bounds of the model in model space (rectangular prism).
     pub fn world_bounds(&self) -> (three::Point, three::Point) {
-        if self.points.len() == 0 && self.edges.len() == 0 {
+        if self.points.is_empty() && self.edges.is_empty() {
             return (
                 three::Point::new(0., 0., 0.), 
                 three::Point::new(0., 0., 0.)
