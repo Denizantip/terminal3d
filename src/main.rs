@@ -90,6 +90,9 @@ fn main() {
     let mut view_pitch: f32 = 0.0;
     let mut distance_to_model = diagonal * INITIAL_DISTANCE_MULTIPLIER;
 
+    // Render points or edges.
+    let mut points_mode = false;
+
     // Setup events.
     let mut mouse_speed: (f32, f32) = (0., 0.);
     let mut last_mouse_position = screen::Point::new(0, 0);
@@ -110,6 +113,9 @@ fn main() {
                         let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
                             && key_event.code == event::KeyCode::Char('c');
                         if is_ctrl_c { graceful_close() }
+                        
+                        // Toggle points mode.
+                        if key_event.code == event::KeyCode::Char('p') { points_mode = !points_mode }
                     }
 
                     // Mouse controls.
@@ -170,7 +176,8 @@ fn main() {
         // Render.
         camera.screen.fit_to_terminal();
         camera.screen.clear();
-        camera.plot_model_edges(&input_model);
+        if points_mode { camera.plot_model_points(&input_model) }
+        else { camera.plot_model_edges(&input_model) }
         camera.screen.render();
         
         // Add buffer time to hit 60 fps.
