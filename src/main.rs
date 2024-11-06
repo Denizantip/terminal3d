@@ -37,7 +37,7 @@ fn graceful_close() -> ! {
 // Closes with the provided error message.
 fn error_close(msg: &dyn fmt::Display) -> ! {
     execute!(
-        io::stdout(),
+        io::stderr(),
         style::Print(msg)
     ).unwrap();
     graceful_close()
@@ -213,7 +213,7 @@ fn main() {
             camera.screen.width,
             camera.screen.height,
         );
-        
+
         let msgs = (
             format!("{} | {} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg, resolution_msg),
             format!("{} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg),
