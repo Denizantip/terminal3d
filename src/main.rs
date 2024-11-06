@@ -93,7 +93,7 @@ fn main() {
 
     // Render modes.
     let mut points_mode = false;
-    let mut braile_mode = false;
+    let mut braile_mode = true;
 
     // Setup events.
     let mut mouse_speed: (f32, f32) = (0., 0.);
@@ -208,7 +208,14 @@ fn main() {
             "fps: {:3.0}", 1. / start.elapsed().as_secs_f32()
         );
 
+        let resolution_msg = format!(
+            "resolution: {} x {}",
+            camera.screen.width,
+            camera.screen.height,
+        );
+        
         let msgs = (
+            format!("{} | {} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg, resolution_msg),
             format!("{} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg),
             format!("{} | {}", camera_position_msg, camera_angle_msg),
             camera_position_msg.to_string(),
@@ -218,6 +225,7 @@ fn main() {
             width if width > msgs.0.len() => { msgs.0 }
             width if width > msgs.1.len() => { msgs.1 }
             width if width > msgs.2.len() => { msgs.2 }
+            width if width > msgs.3.len() => { msgs.3 }
             _ => { "".to_string() }
         };
 
