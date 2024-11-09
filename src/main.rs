@@ -1,6 +1,5 @@
 use std::*;
 use process::exit;
-use screen::{BlockPixel, BrailePixel};
 use time::Duration;
 
 use crossterm::{
@@ -22,6 +21,7 @@ const TARGET_DURATION_PER_FRAME: Duration = Duration::from_millis(1000 / 60);
 const MOUSE_SPEED_MULTIPLIER: f32 = 30.;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 const SCROLL_MULTIPLER: f32 = 0.03;
+const PAN_MULTIPLIER: f32 = 0.1;
 
 // Disables raw mode and mouse capture, and shows the cursor.
 fn graceful_close() -> ! {
@@ -68,7 +68,7 @@ fn main() {
 
     // Get dimensions.
     let bounds = input_model.world_bounds();
-    let center = input_model.model_to_world(&three::Point::new(
+    let mut center = input_model.model_to_world(&three::Point::new(
         (bounds.0.x + bounds.1.x) / 2., 
         (bounds.0.y + bounds.1.y) / 2., 
         (bounds.0.z + bounds.1.z) / 2., 
@@ -94,6 +94,7 @@ fn main() {
     // Render modes.
     let mut points_mode = false;
     let mut braile_mode = true;
+    let mut pan_mode = false;
 
     // Setup events.
     let mut mouse_speed: (f32, f32) = (0., 0.);
@@ -109,14 +110,11 @@ fn main() {
         while event::poll(Duration::from_secs(0)).unwrap() {
             if let Ok(event) = event::read() {
                 match event {
-
-                    // Handle ctrl+c explictly (raw mode disables capture).
                     event::Event::Key(key_event) => {
                         let is_ctrl_c = key_event.modifiers == event::KeyModifiers::CONTROL
                             && key_event.code == event::KeyCode::Char('c');
+
                         if is_ctrl_c { graceful_close() }
-                        
-                        // Toggle modes.
                         if key_event.code == event::KeyCode::Char('p') { points_mode = !points_mode }
                         if key_event.code == event::KeyCode::Char('b') { braile_mode = !braile_mode }
                     }
@@ -125,8 +123,10 @@ fn main() {
                     event::Event::Mouse(mouse_event) => {
                         let (x, y) = (mouse_event.column, mouse_event.row);
                         match mouse_event.kind {
+
                             // If the mouse has been pressed, record this position.
                             event::MouseEventKind::Down(_) => {
+                                pan_mode = mouse_event.modifiers == event::KeyModifiers::SHIFT;
                                 last_mouse_position.x = x as i32;
                                 last_mouse_position.y = y as i32;
                                 start_mouse_position = last_mouse_position;
@@ -135,6 +135,7 @@ fn main() {
 
                             // If the mouse is dragged, update drag speeds.
                             event::MouseEventKind::Drag(_) => {
+                                pan_mode = mouse_event.modifiers == event::KeyModifiers::SHIFT;
                                 let delta_x = x as f32 - start_mouse_position.x as f32;
                                 let delta_y = start_mouse_position.y as f32 - y as f32;
                                 mouse_speed.0 = delta_x / camera.screen.width as f32 * MOUSE_SPEED_MULTIPLIER;
@@ -144,13 +145,13 @@ fn main() {
                                 event_count += 1;
                             }
 
-                            // Zoom out.
                             event::MouseEventKind::ScrollDown => {
+                                // Zoom out.
                                 distance_to_model += diagonal * SCROLL_MULTIPLER;
                             }
 
-                            // Zoom in.
                             event::MouseEventKind::ScrollUp => {
+                                // Zoom in.
                                 distance_to_model -= diagonal * SCROLL_MULTIPLER;
                                 distance_to_model = distance_to_model.max(0.);
                             }
@@ -162,12 +163,27 @@ fn main() {
             }
         }
 
-        // If no event happened, reset the mouse speed.
-        if event_count == 0 { mouse_speed = (0., 0.) }
+        // If no event happened, reset the mouse.
+        if event_count == 0 { 
+            mouse_speed = (0., 0.);
+            pan_mode = false;
+         }
 
         // Update viewer params.
-        view_yaw -= mouse_speed.0;
-        view_pitch -= mouse_speed.1;
+        if pan_mode {
+
+            // Handle horizontal pan.
+            center.x -= mouse_speed.0 * camera.yaw.cos() * diagonal * PAN_MULTIPLIER;
+            center.z += mouse_speed.0 * camera.yaw.sin() * diagonal * PAN_MULTIPLIER;
+
+            // Handle vertical pan.
+            center.y -= mouse_speed.1 * camera.pitch.cos() * diagonal * PAN_MULTIPLIER;
+            center.x += mouse_speed.1 * camera.yaw.sin() * camera.pitch.sin() * diagonal * PAN_MULTIPLIER;
+            center.z += mouse_speed.1 * camera.yaw.cos() * camera.pitch.sin() * diagonal * PAN_MULTIPLIER;
+        } else {
+            view_yaw -= mouse_speed.0;
+            view_pitch -= mouse_speed.1;
+        }
 
         // Update camera position.
         camera.coordinates.z = -view_yaw.cos() * view_pitch.cos() * distance_to_model + center.z;
@@ -177,8 +193,8 @@ fn main() {
         camera.pitch = -view_pitch;
 
         // Render.
-        if braile_mode { camera.screen.fit_to_terminal::<BrailePixel>()  }
-        else { camera.screen.fit_to_terminal::<BlockPixel>() }
+        if braile_mode { camera.screen.fit_to_terminal::<screen::BrailePixel>()  }
+        else { camera.screen.fit_to_terminal::<screen::BlockPixel>() }
 
         camera.screen.clear();
 
