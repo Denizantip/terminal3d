@@ -3,6 +3,13 @@ Terminal3d (`t3d`) is a tool for viewing 3d `.obj` files, right in your terminal
 ![](./media/readme/demo-suzanne.gif)
 *Suzanne the monkey - Find this example under [`examples/suzanne.obj`](./examples/suzanne.obj)*
 
+## Features
+- Reads any renders `.obj` file to the terminal.
+- Render with both **braile** (`⡟`) and **block** (`▛`) charecters.
+- Choose between wireframe and vertices modes.
+- Use mouse controls to view your model, just like any other 3d software.
+
+
 ## Usage
 ```
 t3d: Visualize .obj files in the terminal!
@@ -20,3 +27,6 @@ Controls:
     Press [p] to toggle vertices mode. 
 ```
 *Obtained from `t3d -h`*
+
+## Author
+(c) [Liam Ilan](https://www.liamilan.com/)
