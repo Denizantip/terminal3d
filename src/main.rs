@@ -22,6 +22,21 @@ const MOUSE_SPEED_MULTIPLIER: f32 = 30.;
 const INITIAL_DISTANCE_MULTIPLIER: f32 = 1.5;
 const SCROLL_MULTIPLER: f32 = 0.03;
 const PAN_MULTIPLIER: f32 = 0.1;
+const HELP_MSG: &str = "\
+\x1b[1mt3d\x1b[0m: Visualize .obj files in the terminal!
+
+\x1b[1mUsage\x1b[0m:
+    \"t3d <filepath.obj>\": Interactively view the provided .obj file.
+    \"t3d --h\", \"t3d --help\", \"t3d -h\", \"t3d -help\", \"t3d\": Help and info.
+
+\x1b[1mControls\x1b[0m:
+    Scroll down to zoom out, scroll up to zoom in.
+    Click and drag the mouse to rotate around the model.
+    Click and drag the mouse while holding [shift] to pan.
+
+    Press [b] to toggle block mode. 
+    Press [p] to toggle vertices mode. 
+";
 
 // Disables raw mode and mouse capture, and shows the cursor.
 fn graceful_close() -> ! {
@@ -44,6 +59,22 @@ fn error_close(msg: &dyn fmt::Display) -> ! {
 }
 
 fn main() {
+    // Parse arguments.
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 2 { error_close(&"Please supply only one file path to visualize.") }
+    if args.len() < 1 { error_close(&"Error parsing arguments.") }
+    
+    let help_mode = args.len() == 1 || 
+        ["-h", "-help", "--h", "--help"].map(String::from).contains(&args[1]);
+
+    if help_mode {
+        execute!(
+            io::stdout(),
+            style::Print(HELP_MSG)
+        ).unwrap();
+        graceful_close();
+    }
+
     terminal::enable_raw_mode().unwrap();
     execute!(
         io::stdout(),
@@ -51,10 +82,6 @@ fn main() {
         event::EnableMouseCapture,
     ).unwrap();
 
-    // Parse arguments.
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 2 { error_close(&"Please supply only one file path to visualize.") }
-    if args.len() < 2 { error_close(&"Please supply a file path to visualize.") }
     let file_path = &args[1];
     
     // Load model.
@@ -210,14 +237,14 @@ fn main() {
         }
 
         // Create info message variants for responsive resizing.
-        let camera_position_msg = format!(
-            "x: {:6.3}, y: {:6.3}, z: {:6.3}", 
-            camera.coordinates.x, camera.coordinates.y, camera.coordinates.z
+        let points_mode_msg = format!(
+            "rendering: {}", 
+            if points_mode {"vertices"} else {"edges"}
         );
 
-        let camera_angle_msg = format!(
-            "heading: {:6.3}, pitch: {:6.3}, roll: {:6.3}", 
-            camera.yaw, camera.pitch, camera.roll
+        let braile_mode_msg = format!(
+            "display mode: {}", 
+            if braile_mode {"braile"} else {"blocks"}
         );
 
         let fps_msg = format!(
@@ -231,10 +258,10 @@ fn main() {
         );
 
         let msgs = (
-            format!("{} | {} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg, resolution_msg),
-            format!("{} | {} | {}", camera_position_msg, camera_angle_msg, fps_msg),
-            format!("{} | {}", camera_position_msg, camera_angle_msg),
-            camera_position_msg.to_string(),
+            format!("{} | {} | {} | {}", points_mode_msg, braile_mode_msg, resolution_msg, fps_msg),
+            format!("{} | {} | {}", points_mode_msg, braile_mode_msg, resolution_msg),
+            format!("{} | {}", points_mode_msg, braile_mode_msg),
+            points_mode_msg.to_string(),
         );
 
         let final_msg = match terminal::size().unwrap().0 as usize {

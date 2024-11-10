@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 crossterm = "0.28.1"
+
+[[bin]]
+name = "t3d"
+path = "src/main.rs"
