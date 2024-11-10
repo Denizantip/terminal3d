@@ -1,7 +1,13 @@
 [package]
 name = "terminal3d"
-version = "0.1.0"
+description = "View 3d models in your terminal"
+repository = "https://github.com/liam-ilan/terminal3d"
+readme = "README.md"
+keywords = ["3d", "terminal", "t3d", "model", "obj"]
+categories = ["command-line-utilities", "graphics", "visualization", "multimedia", "rendering"]
+version = "0.0.1"
 edition = "2021"
+license = "MIT"
 
 [dependencies]
 crossterm = "0.28.1"
