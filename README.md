@@ -15,18 +15,31 @@ Terminal3d (`t3d`) is a tool for viewing 3d `.obj` files, right in your terminal
 - Use mouse controls to view your model, just like any other 3d software.
 
 ## Installation
-Terminal3d is published as a crate on [crates.io](https://crates.io/crates/terminal3d). If you have Cargo, you can install it with:
+Installing Terminal3d can be done via brew, crates.io, or from source.
 
+### From brew
+To install Terminal3d with brew, install from [this tap](https://github.com/liam-ilan/homebrew-terminal3d).
 ```sh
-cargo install terminal3d
-```
+brew install liam-ilan/terminal3d/terminal3d
+``` 
 
-The binary will automatically be added to your `PATH` as `t3d`. Run it with,
+You will be able to invoke the binary as `t3d`. Render a `.obj` file with
 ```sh
 t3d <filepath.obj>
 ```
 
-### Installing from Source
+### From crates.io
+Terminal3d is published as a crate on [crates.io](https://crates.io/crates/terminal3d). If you have Cargo, you can install it with
+```sh
+cargo install terminal3d
+```
+
+You will be able to invoke the binary as `t3d`. Render a `.obj` file with
+```sh
+t3d <filepath.obj>
+```
+
+### From Source
 If you don't want to install a Rust crate, but do have Rust installed, you can build and run Terminal3d directly from source.
 
 Clone this repository,
@@ -34,7 +47,7 @@ Clone this repository,
 git clone https://github.com/liam-ilan/terminal3d.git
 ```
 
-Navigate to the root of the repo directory, and run
+To render a `.obj` file, navigate to the root of the repo directory, and run
 ```sh
 cargo run --release <filepath.obj>
 ```
@@ -58,7 +71,7 @@ Controls:
 *Obtained from `t3d -h`*
 
 ## Publishing
-For notes for the maintainer on how to publish Terminal3d, see [`PUBLISHING.md`](PUBLISHING.md).
+Notes for the maintainer on publishing Terminal3d can be found in [`PUBLISHING.md`](PUBLISHING.md).
 
 ## Author
 (c) [Liam Ilan](https://www.liamilan.com/)
