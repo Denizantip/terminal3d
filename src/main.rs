@@ -63,7 +63,7 @@ fn main() {
     // Parse arguments.
     let args: Vec<String> = env::args().collect();
     if args.len() > 2 { error_close(&"Please supply only one file path to visualize.") }
-    if args.len() < 1 { error_close(&"Error parsing arguments.") }
+    if args.is_empty() { error_close(&"Error parsing arguments.") }
     
     let help_mode = args.len() == 1 || 
         ["-h", "-help", "--h", "--help"].map(String::from).contains(&args[1]);
