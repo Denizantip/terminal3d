@@ -28,6 +28,7 @@ const HELP_MSG: &str = "\
 \x1b[1mUsage\x1b[0m:
     \"t3d <filepath.obj>\": Interactively view the provided .obj file.
     \"t3d --h\", \"t3d --help\", \"t3d -h\", \"t3d -help\", \"t3d\": Help and info.
+    \"t3d --v\", \"t3d --version\", \"t3d -v\", \"t3d -version\": Get version info.
 
 \x1b[1mControls\x1b[0m:
     Scroll down to zoom out, scroll up to zoom in.
@@ -75,6 +76,17 @@ fn main() {
         graceful_close();
     }
 
+    let version_mode = args.len() == 1 || 
+        ["-v", "-version", "--v", "--version"].map(String::from).contains(&args[1]);
+
+    if version_mode {
+        execute!(
+            io::stdout(),
+            style::Print(env!("CARGO_PKG_VERSION"))
+        ).unwrap();
+        graceful_close();
+    }
+        
     terminal::enable_raw_mode().unwrap();
     execute!(
         io::stdout(),

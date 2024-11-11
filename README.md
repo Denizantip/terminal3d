@@ -59,6 +59,7 @@ t3d: Visualize .obj files in the terminal!
 Usage:
     "t3d <filepath.obj>": Interactively view the provided .obj file.
     "t3d --h", "t3d --help", "t3d -h", "t3d -help", "t3d": Help and info.
+    "t3d --v", "t3d --version", "t3d -v", "t3d -version": Get version info.
 
 Controls:
     Scroll down to zoom out, scroll up to zoom in.
