@@ -57,5 +57,8 @@ Controls:
 ```
 *Obtained from `t3d -h`*
 
+## Publishing
+For notes for the maintainer on how to publish Terminal3d, see [`PUBLISHING.md`](PUBLISHING.md).
+
 ## Author
 (c) [Liam Ilan](https://www.liamilan.com/)
