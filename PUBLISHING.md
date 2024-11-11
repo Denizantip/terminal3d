@@ -9,4 +9,5 @@ These are just some general notes for the mainainer of Terminal3d to publish to 
 5) Go to the Homebrew tap repo for Terminal3d, [liam-ilan/homebrew-terminal3d](https://github.com/liam-ilan/homebrew-terminal3d), and update:
     - The `url` field with the correct tag.
     - The `sha256` field with the hash from the previous step.
+    - The `test` field with the correct version.
 6) Commit and push the changes to the Homebrew tap.
