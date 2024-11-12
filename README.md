@@ -9,8 +9,8 @@ Terminal3d (`t3d`) is a tool for viewing 3d `.obj` files, right in your terminal
 ---
 
 ## Features
-- Reads any renders `.obj` file to the terminal.
-- Render with both **braile** (`⡟`) and **block** (`▛`) charecters.
+- Reads and renders `.obj` files to the terminal.
+- Render with both **braille** (`⡟`) and **block** (`▛`) characters.
 - Choose between wireframe and vertices modes.
 - Use mouse controls to view your model, just like any other 3d software.
 
@@ -59,7 +59,7 @@ cargo run --release <filepath.obj>
 
 | ![](./media/readme/demo-vc.gif)                        |
 |-----------------------------------------------------------------------|
-| [UBC Formula Electric](https://www.ubcformulaelectric.com/)'s Vehicle Controller, rendered in verticies mode from an export from Altium Designer. This board drives decisions related to inverters, drive algorithims, and LV power management. If you would like to support a team of aspiring engineers, contact `contact@ubcformulaelectric.com` for more info. |
+| [UBC Formula Electric](https://www.ubcformulaelectric.com/)'s Vehicle Controller, rendered in vertices mode from an export from Altium Designer. This board drives decisions related to inverters, drive algorithms, and LV power management. If you would like to support the team of aspiring engineers behind this board and the vehicle it drives, contact `contact@ubcformulaelectric.com` for more info. |
 
 ## Usage
 ```
