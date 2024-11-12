@@ -1,4 +1,4 @@
-<p align=center><img src="./media/logo.png" alt="crumb icon" height="300"/></p>
+<p align=center><img src="./media/logo.png" alt="crumb icon" height="200"/></p>
 
 # Terminal3d
 Terminal3d (`t3d`) is a tool for viewing 3d `.obj` files, right in your terminal! 🦀
