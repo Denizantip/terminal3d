@@ -5,7 +5,7 @@ repository = "https://github.com/liam-ilan/terminal3d"
 readme = "README.md"
 keywords = ["3d", "terminal", "t3d", "model", "obj"]
 categories = ["command-line-utilities", "graphics", "visualization", "multimedia", "rendering"]
-version = "0.0.3"
+version = "0.0.4"
 edition = "2021"
 license = "MIT"
 
