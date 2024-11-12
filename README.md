@@ -52,6 +52,12 @@ To render a `.obj` file, navigate to the root of the repo directory, and run
 cargo run --release <filepath.obj>
 ```
 
+## Demos
+| ![](./media/readme/demo-teapot-block-mode.gif)                        | ![](./media/readme/demo-cow-vertices-mode.gif)                     |
+|-----------------------------------------------------------------------|--------------------------------------------------------------------|
+| [`examples/teapot.obj`](./examples/teapot.obj) rendered in block mode | [`examples/cow.obj`](./examples/cow.obj) rendered in vertices mode |
+
+
 ## Usage
 ```
 t3d: Visualize .obj files in the terminal!
