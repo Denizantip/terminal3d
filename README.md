@@ -1,4 +1,4 @@
-<p align=center><img src="./media/logo.png" alt="crumb icon" height="150"/></p>
+<p align=center><img src="./media/logo.png" alt="crumb icon" height="300"/></p>
 
 # Terminal3d
 Terminal3d (`t3d`) is a tool for viewing 3d `.obj` files, right in your terminal! 🦀
@@ -6,6 +6,7 @@ Terminal3d (`t3d`) is a tool for viewing 3d `.obj` files, right in your terminal
 ---
 
 ![](./media/readme/demo-suzanne.gif)
+
 *Suzanne the monkey - Find this example under [`examples/suzanne.obj`](./examples/suzanne.obj)*
 
 ---
