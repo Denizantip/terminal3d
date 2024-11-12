@@ -57,6 +57,9 @@ cargo run --release <filepath.obj>
 |-----------------------------------------------------------------------|--------------------------------------------------------------------|
 | [`examples/teapot.obj`](./examples/teapot.obj) rendered in block mode | [`examples/cow.obj`](./examples/cow.obj) rendered in vertices mode |
 
+| ![](./media/readme/demo-vc.gif)                        |
+|-----------------------------------------------------------------------|
+| [UBC Formula Electric](https://www.ubcformulaelectric.com/)'s Vehicle Controller, rendered in verticies mode from an export from Altium Designer. This board drives decisions related to inverters, drive algorithims, and LV power management. If you would like to support a team of aspiring engineers, contact `contact@ubcformulaelectric.com` for more info. |
 
 ## Usage
 ```
