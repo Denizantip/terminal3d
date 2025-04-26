@@ -6,7 +6,7 @@ readme = "README.md"
 keywords = ["3d", "terminal", "t3d", "model", "obj"]
 categories = ["command-line-utilities", "graphics", "visualization", "multimedia", "rendering"]
 exclude = ["examples", "media"]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 

@@ -64,7 +64,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     if args.len() > 2 { error_close(&"Please supply only one file path to visualize.") }
     if args.is_empty() { error_close(&"Error parsing arguments.") }
-    
+
     let help_mode = args.len() == 1 || 
         ["-h", "-help", "--h", "--help"].map(String::from).contains(&args[1]);
 
@@ -86,7 +86,7 @@ fn main() {
         ).unwrap();
         graceful_close();
     }
-        
+
     terminal::enable_raw_mode().unwrap();
     execute!(
         io::stdout(),
@@ -95,7 +95,7 @@ fn main() {
     ).unwrap();
 
     let file_path = &args[1];
-    
+
     // Load model.
     let input_model = match model::Model::new_obj(
         file_path,
@@ -124,6 +124,9 @@ fn main() {
         0., 0., 0., 
         VIEWPORT_DISTANCE, VIEWPORT_FOV,
     );
+
+    // Ensure camera.braille_mode matches the default braile_mode
+    camera.braille_mode = true;
 
     // Setup viewer params (relative to model).
     let mut view_yaw: f32 = 0.0;
@@ -155,7 +158,10 @@ fn main() {
 
                         if is_ctrl_c { graceful_close() }
                         if key_event.code == event::KeyCode::Char('p') { points_mode = !points_mode }
-                        if key_event.code == event::KeyCode::Char('b') { braile_mode = !braile_mode }
+                        if key_event.code == event::KeyCode::Char('b') { 
+                            braile_mode = !braile_mode;
+                            camera.braille_mode = braile_mode;
+                        }
                     }
 
                     // Mouse controls.
@@ -242,7 +248,7 @@ fn main() {
 
         if braile_mode { camera.screen.render::<screen::BrailePixel>() }
         else { camera.screen.render::<screen::BlockPixel>() }
-        
+
         // Add buffer time to hit 60 fps.
         if let Some(time) = TARGET_DURATION_PER_FRAME.checked_sub(start.elapsed()) { 
             thread::sleep(time);

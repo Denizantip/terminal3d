@@ -33,7 +33,10 @@ pub struct Camera {
     pub viewport_fov: f32,
 
     // Screen to render.
-    pub screen: screen::Screen
+    pub screen: screen::Screen,
+
+    // Whether braille mode is active
+    pub braille_mode: bool
 }
 
 #[allow(dead_code)]
@@ -48,7 +51,8 @@ impl Camera {
             coordinates, 
             yaw, pitch, roll, 
             viewport_distance, viewport_fov, 
-            screen: screen::Screen::new()
+            screen: screen::Screen::new(),
+            braille_mode: true
         }
     }
 
@@ -89,7 +93,18 @@ impl Camera {
 
         // Compute viewport width and height based on screen width, height, and fov.
         let viewport_width = 2. * self.viewport_distance * (self.viewport_fov / 2.).tan();
-        let viewport_height = (self.screen.height as f32 / self.screen.width as f32) * viewport_width;
+
+        // Adjust aspect ratio for braille mode
+        // In braille mode, characters are twice as tall as they are wide
+        let aspect_ratio = if self.braille_mode {
+            // For braille (2x4 grid), divide height by 2 to compensate for the taller characters
+            self.screen.height as f32 / self.screen.width as f32
+        } else {
+            // For block mode (2x2 grid), use normal aspect ratio
+            (self.screen.height as f32 * 2.0) / self.screen.width as f32
+        };
+
+        let viewport_height = aspect_ratio * viewport_width;
 
         // Project to screen coordinates.
         let screen_x = (viewport_x / viewport_width + 0.5) * self.screen.width as f32;
